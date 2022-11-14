@@ -1,6 +1,7 @@
 {
   "name": "globalxtreme/rabbitmq",
   "description": "GlobalXtreme Rabbit MQ Package",
+  "license": "MIT",
   "authors": [
     {
       "name": "Yuswa",
