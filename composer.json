@@ -28,7 +28,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "GlobalXtreme\\StorageManager\\StorageServiceProvider"
+        "GlobalXtreme\\RabbitMQ\\RabbitMQServiceProvider"
       ]
     }
   }
