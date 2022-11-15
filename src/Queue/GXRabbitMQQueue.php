@@ -2,7 +2,7 @@
 
 namespace GlobalXtreme\RabbitMQ\Queue;
 
-use GlobalXtreme\RabbitMQ\Queue\Traits\GXRabbitMQDispatchable;
+use GlobalXtreme\RabbitMQ\Queue\Support\GXRabbitMQDispatchable;
 
 class GXRabbitMQQueue
 {

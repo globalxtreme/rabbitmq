@@ -46,9 +46,4 @@ class GXRabbitMessage extends BaseModel
         return $this->morphTo('sender', 'senderType', 'senderId');
     }
 
-    public function consumer(): MorphTo
-    {
-        return $this->morphTo('consumer', 'consumerType', 'consumerId');
-    }
-
 }

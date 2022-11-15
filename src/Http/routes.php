@@ -7,7 +7,7 @@ $service = config('base.conf.service');
 
 Route::prefix(config('base.conf.prefix.web') . "/$version/$service/message-brokers")
     ->middleware(['web', 'identifier.employee'])
-    ->namespace("$this->namespace\\" . config('base.conf.namespace.web') . "\\$version")
+    ->namespace("GlobalXtreme\\RabbitMQ\\Http\\Controllers")
     ->group(function () {
 
         Route::prefix('exchanges')

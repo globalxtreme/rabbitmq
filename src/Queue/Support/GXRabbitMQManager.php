@@ -1,6 +1,6 @@
 <?php
 
-namespace GlobalXtreme\RabbitMQ\Queue\Traits;
+namespace GlobalXtreme\RabbitMQ\Queue\Support;
 
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageFailed;
@@ -27,7 +27,7 @@ class GXRabbitMQManager
     /**
      * @var string
      */
-    protected string $exchange = 'default';
+    protected string $exchange = 'direct';
 
     /**
      * @var bool
@@ -240,7 +240,7 @@ class GXRabbitMQManager
     /**
      * Handle the object's destruction.
      *
-     * @return void
+     * @throws \Throwable
      */
     public function __destruct()
     {
@@ -265,6 +265,10 @@ class GXRabbitMQManager
             if (!$this->exchange) {
                 $this->logError("Please set your exchange first!");
                 return;
+            }
+
+            if (count($this->queues) == 0) {
+                $this->onExchange('fanout', $this->ignoreExchangeName);
             }
 
             if ($this->ignoreExchangeName) {

@@ -1,6 +1,6 @@
 <?php
 
-namespace GlobalXtreme\RabbitMQ\Queue\Traits;
+namespace GlobalXtreme\RabbitMQ\Queue\Support;
 
 trait GXRabbitMQDispatchable
 {
