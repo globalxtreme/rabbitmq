@@ -7,6 +7,7 @@ use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
 class GXRabbitExchange extends BaseModel
 {
     protected $table = 'exchanges';
+    protected $guarded = [''];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
 

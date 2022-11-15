@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class GXRabbitMessage extends BaseModel
 {
     protected $table = 'messages';
+    protected $guarded = [''];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
     protected $casts = [
-        'payload' => 'array'
+        'queueConsumers' => 'array',
+        'payload' => 'array',
     ];
 
 

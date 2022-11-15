@@ -32,7 +32,7 @@ class GXRabbitExchangeController extends Controller
             'type' => 'required|string'
         ]);
 
-        $exchange = GXRabbitExchange::create($request->only(['name', 'type']));
+        $exchange = GXRabbitExchange::create($request->only(['name', 'type']) + (auth_created_by() ?: []));
         return success($exchange);
     }
 

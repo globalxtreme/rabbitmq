@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class GXRabbitQueue extends BaseModel
 {
     protected $table = 'queues';
+    protected $guarded = [''];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
 

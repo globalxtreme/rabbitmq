@@ -32,7 +32,7 @@ class GXRabbitKeyController extends Controller
             'name' => 'required|string'
         ]);
 
-        $key = GXRabbitKey::create($request->only(['queueId', 'name']));
+        $key = GXRabbitKey::create($request->only(['queueId', 'name']) + (auth_created_by() ?: []));
         return success($key);
     }
 

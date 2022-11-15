@@ -2,6 +2,10 @@
 
 namespace GlobalXtreme\RabbitMQ\Queue\Traits;
 
+use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageFailed;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitQueue;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
@@ -43,7 +47,7 @@ class GXRabbitMQManager
     /**
      * @var string
      */
-    protected string $consumeClass = 'App\\Jobs\\RabbitMQMessageJob';
+    protected string $consumeClass = 'GlobalXtreme\\RabbitMQ\\Jobs\\RabbitMQMessageJob';
 
     /**
      * @var float
@@ -279,13 +283,19 @@ class GXRabbitMQManager
                 return;
             }
 
-            $this->setAMQPChannel();
+            DB::connection(config('gx-rabbitmq.db-connection'))->transaction(function () use ($exchange) {
 
-            $this->declareExchange($exchange);
+                $queueMessage = $this->saveQueueMessage($exchange);
 
-            $this->publishMessage($exchange);
+                $this->setAMQPChannel();
 
-            $this->closeConnection();
+                $this->declareExchange($exchange);
+
+                $this->publishMessage($queueMessage, $exchange);
+
+                $this->closeConnection();
+
+            });
 
         } catch (\Exception $exception) {
             Log::error($exception);
@@ -295,6 +305,29 @@ class GXRabbitMQManager
 
 
     /** --- SUB FUNCTIONS --- */
+
+    private function saveQueueMessage(mixed $exchange)
+    {
+        $queueMessage = null;
+        if ($this->failedId) {
+            $queueFailed = GXRabbitMessageFailed::find($this->failedId);
+            if ($queueFailed) {
+                $queueMessage = $queueFailed->message;
+            }
+        }
+
+        if (!$queueMessage) {
+            $queueMessage = GXRabbitMessage::create([
+                'exchange' => $exchange['name'],
+                'queueSender' => $this->rabbitmqConf['queue'],
+                'key' => $this->key,
+                'senderId' => isset($this->message['id']) ? $this->message['id'] : null,
+                'senderType' => isset($this->message['class']) ? $this->message['class'] : null
+            ]);
+        }
+
+        return $queueMessage;
+    }
 
     private function setAMQPChannel()
     {
@@ -322,7 +355,7 @@ class GXRabbitMQManager
         );
     }
 
-    private function publishMessage($exchange)
+    private function publishMessage($queueMessage, $exchange)
     {
         $exceptionMessage = [];
         if ($this->failedId || $this->exception) {
@@ -337,16 +370,17 @@ class GXRabbitMQManager
         }
 
         $body = json_encode([
-            "uuid" => Uuid::uuid4()->toString(),
-            "displayName" => $this->consumeClass,
+            'uuid' => Uuid::uuid4()->toString(),
+            'displayName' => $this->consumeClass,
             'job' => "Illuminate\\Queue\\CallQueuedHandler@call",
-            "data" => [
+            'data' => [
                 'commandName' => $this->consumeClass,
                 'command' => serialize(new $this->consumeClass([
                         'key' => $this->key,
                         'failedKey' => $this->failedKey,
                         'exchange' => $exchange['name'],
                         'queue' => $this->rabbitmqConf['queue'],
+                        'messageId' => $queueMessage->id,
                         'message' => $this->message
                     ] + $exceptionMessage))
             ]
@@ -357,6 +391,20 @@ class GXRabbitMQManager
             'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
             'content_type' => 'application/json'
         ];
+
+        if (!$queueMessage->payload) {
+            $queueMessage->update(['payload' => ['body' => json_decode($body, true), 'properties' => $properties]]);
+        }
+
+        if (!$queueMessage->queueConsumers) {
+            if (count($this->queues) == 0) {
+                $queues = GXRabbitQueue::select('name')->get()->pluck('name')->toArray();
+            } else {
+                $queues = $this->queues;
+            }
+
+            $queueMessage->update(['queueConsumers' => $queues]);
+        }
 
         $msg = new AMQPMessage($body, $properties);
 

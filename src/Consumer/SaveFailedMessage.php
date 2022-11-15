@@ -2,7 +2,10 @@
 
 namespace GlobalXtreme\RabbitMQ\Consumer;
 
+use GlobalXtreme\RabbitMQ\Mail\FailedMessageMail;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageFailed;
+use GlobalXtreme\RabbitMQ\ThirdParty\Telegram;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -10,21 +13,23 @@ use Illuminate\Support\Facades\Mail;
 class SaveFailedMessage
 {
     /**
+     * @param GXRabbitMessage $rabbitMessage
      * @param array|string $data
      *
      * @return void
      */
-    public function handle(array|string $data)
+    public function handle(GXRabbitMessage $rabbitMessage, array|string $data)
     {
         try {
 
-            DB::transaction(function () use ($data) {
+            DB::transaction(function () use ($data, $rabbitMessage) {
 
                 $subject = "[{$data['queue']}] {$data['failedKey']}. ID: " . ($data['failedId'] ?: '{failed-id}');
 
                 if (!$data['failedId']) {
 
                     $failedQueue = GXRabbitMessageFailed::create([
+                        'messageId' => $rabbitMessage->id,
                         'subject' => $subject,
                         'queue' => $data['queue'],
                         'key' => $data['failedKey'],
@@ -74,7 +79,6 @@ class SaveFailedMessage
     private function sendToTelegram(string $message)
     {
         $telegram = new Telegram();
-        $telegram->fromDevelopment();
         $telegram->queue($message);
     }
 

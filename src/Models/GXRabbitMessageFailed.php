@@ -3,11 +3,12 @@
 namespace GlobalXtreme\RabbitMQ\Models;
 
 use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GXRabbitMessageFailed extends BaseModel
 {
     protected $table = 'message_faileds';
+    protected $guarded = [''];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
     protected $casts = [
@@ -52,14 +53,9 @@ class GXRabbitMessageFailed extends BaseModel
 
     /** --- RELATIONSHIPS --- */
 
-    public function sender(): MorphTo
+    public function message(): BelongsTo
     {
-        return $this->morphTo('sender', 'senderType', 'senderId');
-    }
-
-    public function consumer(): MorphTo
-    {
-        return $this->morphTo('consumer', 'consumerType', 'consumerId');
+        return $this->belongsTo(GXRabbitMessage::class, 'messageId');
     }
 
 }

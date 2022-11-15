@@ -1,8 +1,8 @@
 <?php
 
-namespace App\ThirdParty;
+namespace GlobalXtreme\RabbitMQ\ThirdParty;
 
-use App\Jobs\SendTelegramMessageJob;
+use GlobalXtreme\RabbitMQ\Jobs\SendTelegramMessageJob;
 use GlobalXtreme\Response\Constant\ResponseConstant;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;

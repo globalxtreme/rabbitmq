@@ -4,9 +4,12 @@ namespace GlobalXtreme\RabbitMQ\Models\Support;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BaseModel extends Model
 {
+    use SoftDeletes;
+
     // Custom date times column
     const CREATED_AT = 'createdAt';
     const UPDATED_AT = 'updatedAt';

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace GlobalXtreme\RabbitMQ\Jobs;
 
 use App\ThirdParty\Telegram;
 use Illuminate\Bus\Queueable;

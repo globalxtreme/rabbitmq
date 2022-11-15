@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class GXRabbitKey extends BaseModel
 {
     protected $table = 'keys';
+    protected $guarded = [''];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
 

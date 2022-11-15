@@ -32,7 +32,7 @@ class GXRabbitQueueController extends Controller
             'type' => 'required|string'
         ]);
 
-        $queue = GXRabbitQueue::create($request->only(['name', 'type']));
+        $queue = GXRabbitQueue::create($request->only(['name', 'type']) + (auth_created_by() ?: []));
         return success($queue);
     }
 
