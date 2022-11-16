@@ -10,14 +10,16 @@ if (!function_exists("failed_message_broker")) {
      * @param string $queue
      * @param string $key
      * @param array|string $message
-     * @param Exception $exception
+     * @param Exception|string|null $exception
+     * @param int|null $messageId
      * @param int|null $failedId
      *
      * @return void
      */
-    function failed_message_broker(string $exchange, string $queue, string $key, array|string $message, Exception $exception, int|null $failedId = null)
+    function failed_message_broker(string $exchange, string $queue, string $key, array|string $message,
+                                   Exception|string|null $exception = null, int|null $messageId = null, int|null $failedId = null)
     {
-        GXRabbitMQQueue::dispatch($message)
+        GXRabbitMQQueue::dispatch($message, $messageId)
             ->onExchange($exchange, true)->onQueue($queue)->onKey(GXRabbitKeyConstant::FAILED_SAVE)
             ->onFailedId($failedId)->onFailedKey($key)->onException($exception);
     }
@@ -27,15 +29,16 @@ if (!function_exists("failed_message_broker")) {
 if (!function_exists("success_repair_message_broker")) {
 
     /**
+     * @param int $messageId
      * @param int $failedId
      * @param string $queue
      * @param string $key
      *
      * @return void
      */
-    function success_repair_message_broker(int $failedId, string $queue, string $key)
+    function success_repair_message_broker(int $messageId, int $failedId, string $queue, string $key)
     {
-        GXRabbitMQQueue::dispatch("Repair is successfully")
+        GXRabbitMQQueue::dispatch("Repair is successfully", $messageId)
             ->onExchange('failed')->onQueue($queue)->onKey(GXRabbitKeyConstant::FAILED_SAVE)
             ->onFailedId($failedId)->onFailedKey($key, true);
     }
