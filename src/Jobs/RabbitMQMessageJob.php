@@ -36,15 +36,15 @@ class RabbitMQMessageJob implements ShouldQueue
             }
 
             $key = $this->data['key'];
-            if (!isset(GXRabbitKeyConstant::MESSAGES[$key]) || !GXRabbitKeyConstant::MESSAGES[$key]) {
-                $this->logError("Message broker key does not exists or not yet set service class!");
+            $queueMessage = GXRabbitMessage::find($this->data['messageId']);
+
+            $service = GXRabbitKeyConstant::callMessageClass($queueMessage, $key);
+            if (!$service) {
+                $this->logError("Message broker key does not exists or not yet set service class! [$key]");
                 return;
             }
 
-            $queueMessage = GXRabbitMessage::find($this->data['messageId']);
-
-            $service = GXRabbitKeyConstant::callMessageClass($key);
-            $service->handle($queueMessage, ($key == GXRabbitKeyConstant::FAILED_SAVE) ? $this->data : $this->data['message']);
+            $service->handle(($key == GXRabbitKeyConstant::FAILED_SAVE) ? $this->data : $this->data['message']);
 
             if (isset($this->data['failedId']) && $this->data['failedId']) {
                 success_repair_message_broker($this->data['messageId'], $this->data['failedId'], $this->data['queue'], $this->data['key']);

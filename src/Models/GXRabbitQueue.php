@@ -26,6 +26,11 @@ class GXRabbitQueue extends BaseModel
         });
     }
 
+    public function scopeOfName($query, $name)
+    {
+        return $query->where('name', $name);
+    }
+
 
     /** --- RELATIONSHIPS --- */
 

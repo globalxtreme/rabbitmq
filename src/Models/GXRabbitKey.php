@@ -20,7 +20,7 @@ class GXRabbitKey extends BaseModel
         return $query->where(function ($query) use ($request) {
 
             if ($request->queueId) {
-                $query->where('queueId', $request->queueId);
+                $query->ofQueueId($request->queueId);
             }
 
             if ($this->hasSearch($request)) {
@@ -28,6 +28,16 @@ class GXRabbitKey extends BaseModel
             }
 
         });
+    }
+
+    public function scopeOfQueueId($query, $queueId)
+    {
+        return $query->where('queueId', $queueId);
+    }
+
+    public function scopeOfName($query, $name)
+    {
+        return $query->where('name', $name);
     }
 
 
