@@ -89,7 +89,7 @@ class SaveFailedMessage
             ->onConnection('database')
             ->onQueue('default');
 
-        Mail::to(config('base.conf.dev-emails'))
+        Mail::to(config('mail.dev-emails'))
             ->queue($message);
 
     }

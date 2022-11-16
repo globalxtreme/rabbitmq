@@ -48,19 +48,12 @@ class RabbitMQMessageJob implements ShouldQueue
             $service->handle($queueMessage, ($key == GXRabbitKeyConstant::FAILED_SAVE) ? $this->data : $this->data['message']);
 
             if (isset($this->data['failedId']) && $this->data['failedId']) {
-                success_repair_message_broker($this->data['failedId'], $this->data['queue'], $this->data['key']);
+                success_repair_message_broker($this->data['messageId'], $this->data['failedId'], $this->data['queue'], $this->data['key']);
             }
 
         } catch (\Exception $exception) {
             Log::error($exception);
-            failed_message_broker(
-                $this->data['exchange'],
-                $this->data['queue'],
-                $this->data['key'],
-                $this->data['message'],
-                $exception,
-                failedId: isset($this->data['failedId']) ? $this->data['failedId'] : null
-            );
+            $this->sendMessageFailed($exception);
         }
     }
 
@@ -74,5 +67,21 @@ class RabbitMQMessageJob implements ShouldQueue
     private function logError(string $string)
     {
         Log::error("RabbitMQ-Consume: $string");
+
+        $this->sendMessageFailed($string);
     }
+
+    private function sendMessageFailed(\Exception|string|null $exception)
+    {
+        failed_message_broker(
+            $this->data['exchange'],
+            $this->data['queue'],
+            $this->data['key'],
+            $this->data['message'],
+            $exception,
+            messageId: isset($this->data['messageId']) ? $this->data['messageId'] : null,
+            failedId: isset($this->data['failedId']) ? $this->data['failedId'] : null
+        );
+    }
+
 }
