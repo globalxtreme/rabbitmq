@@ -14,24 +14,32 @@ class SaveFailedMessage
 {
     /**
      * @param GXRabbitMessage $rabbitMessage
+     */
+    public function __construct(protected GXRabbitMessage $rabbitMessage)
+    {
+    }
+
+
+    /**
      * @param array|string $data
      *
      * @return void
      */
-    public function handle(GXRabbitMessage $rabbitMessage, array|string $data)
+    public function handle(array|string $data)
     {
         try {
 
-            DB::transaction(function () use ($data, $rabbitMessage) {
+            DB::transaction(function () use ($data) {
 
                 $subject = "[{$data['queue']}] {$data['failedKey']}. ID: " . ($data['failedId'] ?: '{failed-id}');
 
                 if (!$data['failedId']) {
 
                     $failedQueue = GXRabbitMessageFailed::create([
-                        'messageId' => $rabbitMessage->id,
+                        'messageId' => $this->rabbitMessage->id,
                         'subject' => $subject,
-                        'queue' => $data['queue'],
+                        'queueSender' => $this->rabbitMessage->queueSender,
+                        'queueConsumer' => $data['queue'],
                         'key' => $data['failedKey'],
                         'payload' => $data['message'],
                         'exception' => $data['exception'],
