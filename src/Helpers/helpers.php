@@ -16,8 +16,7 @@ if (!function_exists("failed_message_broker")) {
      *
      * @return void
      */
-    function failed_message_broker(string $exchange, string $queue, string $key, array|string $message,
-                                   Exception|string|null $exception = null, int|null $messageId = null, int|null $failedId = null)
+    function failed_message_broker(string $exchange, string $queue, string $key, $message, $exception = null, $messageId = null, $failedId = null)
     {
         GXRabbitMQQueue::dispatch($message, $messageId)
             ->onExchange($exchange, true)->onQueue($queue)->onKey(GXRabbitKeyConstant::FAILED_SAVE)
