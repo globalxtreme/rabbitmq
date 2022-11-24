@@ -4,7 +4,13 @@ namespace GlobalXtreme\RabbitMQ\Queue\Support;
 
 trait GXRabbitMQDispatchable
 {
-    public static function dispatch(array|string $message, int|null $queueMessageId = null)
+    /**
+     * @param array|string $message
+     * @param int|null $queueMessageId
+     *
+     * @return GXRabbitMQManager
+     */
+    public static function dispatch($message, $queueMessageId = null)
     {
         return new GXRabbitMQManager($message, $queueMessageId);
     }

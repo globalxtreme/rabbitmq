@@ -104,7 +104,7 @@ class GXRabbitMQManager
      * @param string|array $message
      * @param int|null $queueMessageId
      */
-    public function __construct(string|array $message, int|null $queueMessageId = null)
+    public function __construct($message, $queueMessageId = null)
     {
         $this->message = $message;
         $this->queueMessageId = $queueMessageId;
@@ -216,7 +216,7 @@ class GXRabbitMQManager
      *
      * @return GXRabbitMQManager
      */
-    public function onFailedId(int|null $failedId): GXRabbitMQManager
+    public function onFailedId($failedId): GXRabbitMQManager
     {
         $this->failedId = $failedId;
 
@@ -229,7 +229,7 @@ class GXRabbitMQManager
      *
      * @return $this
      */
-    public function onFailedKey(string|null $failedKey, bool|null $repairStatus = null): GXRabbitMQManager
+    public function onFailedKey($failedKey, $repairStatus = null): GXRabbitMQManager
     {
         $this->failedKey = $failedKey;
         $this->repairStatus = $repairStatus;
@@ -242,7 +242,7 @@ class GXRabbitMQManager
      *
      * @return GXRabbitMQManager
      */
-    public function onException(\Exception|string|null $exception): GXRabbitMQManager
+    public function onException($exception): GXRabbitMQManager
     {
         $this->exception = $exception;
 

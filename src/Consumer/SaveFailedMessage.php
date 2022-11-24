@@ -32,7 +32,7 @@ class SaveFailedMessage
      *
      * @return void
      */
-    public function handle(array|string $data)
+    public function handle($data)
     {
         try {
 

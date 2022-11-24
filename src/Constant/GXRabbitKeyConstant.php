@@ -25,7 +25,7 @@ class GXRabbitKeyConstant
      *
      * @return mixed|null
      */
-    public static function callMessageClass(GXRabbitMessage $message, string $key, string|null $queue = null)
+    public static function callMessageClass(GXRabbitMessage $message, string $key, $queue = null)
     {
         if (isset(static::MESSAGES[$key]) && static::MESSAGES[$key]) {
             $class = static::MESSAGES[$key];

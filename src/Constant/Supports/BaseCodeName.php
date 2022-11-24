@@ -18,7 +18,7 @@ class BaseCodeName
      *
      * @return array
      */
-    public static function get(array|null $options = null): array
+    public static function get($options = null): array
     {
         if ($options) {
             return collect($options)->map(function ($option) {
@@ -61,7 +61,7 @@ class BaseCodeName
      *
      * @return array|null
      */
-    public static function codeName(string|null $code = null): array|null
+    public static function codeName($code = null): array|null
     {
         if (!$code) {
             return null;

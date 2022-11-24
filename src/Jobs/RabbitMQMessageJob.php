@@ -75,7 +75,7 @@ class RabbitMQMessageJob implements ShouldQueue
         $this->sendMessageFailed($string);
     }
 
-    private function sendMessageFailed(\Exception|string|null $exception)
+    private function sendMessageFailed($exception)
     {
         failed_message_broker(
             $this->data['exchange'],
