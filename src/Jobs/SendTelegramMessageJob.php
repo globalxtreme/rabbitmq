@@ -13,12 +13,18 @@ class SendTelegramMessageJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * @var string
+     */
+    public $message;
+
 
     /**
      * @param string $message
      */
-    public function __construct(public string $message)
+    public function __construct(string $message)
     {
+        $this->message = $message;
     }
 
 

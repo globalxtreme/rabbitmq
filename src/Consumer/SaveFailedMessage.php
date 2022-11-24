@@ -13,10 +13,17 @@ use Illuminate\Support\Facades\Mail;
 class SaveFailedMessage
 {
     /**
+     * @var GXRabbitMessage
+     */
+    protected $rabbitMessage;
+
+
+    /**
      * @param GXRabbitMessage $rabbitMessage
      */
-    public function __construct(protected GXRabbitMessage $rabbitMessage)
+    public function __construct(GXRabbitMessage $rabbitMessage)
     {
+        $this->rabbitMessage = $rabbitMessage;
     }
 
 

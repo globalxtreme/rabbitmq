@@ -10,10 +10,17 @@ use Illuminate\Support\Facades\Log;
 class RepairFailedMessage
 {
     /**
+     * @var GXRabbitMessageFailed
+     */
+    protected $messageFailed;
+
+
+    /**
      * @param GXRabbitMessageFailed $messageFailed
      */
-    public function __construct(protected GXRabbitMessageFailed $messageFailed)
+    public function __construct(GXRabbitMessageFailed $messageFailed)
     {
+        $this->messageFailed = $messageFailed;
     }
 
     /**

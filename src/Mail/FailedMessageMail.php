@@ -11,12 +11,26 @@ class FailedMessageMail extends Mailable
     use Queueable, SerializesModels;
 
     /**
+     * @var string
+     */
+    public $error;
+
+    /**
+     * @var string
+     */
+    public $trace;
+
+
+    /**
      * @param string $subject
      * @param string $error
      * @param string $trace
      */
-    public function __construct(string $subject, public string $error, public string $trace)
+    public function __construct(string $subject, string $error, string $trace)
     {
+        $this->error = $error;
+        $this->trace = $trace;
+
         $this->subject("Message-Broker-Bug: $subject");
     }
 

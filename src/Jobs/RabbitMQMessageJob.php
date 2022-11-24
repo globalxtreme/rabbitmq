@@ -15,14 +15,19 @@ class RabbitMQMessageJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $data;
+
+
     /**
      * @param $data
      */
-    public function __construct(public $data)
+    public function __construct($data)
     {
-        if (is_string($this->data)) {
-            $this->data = json_decode($this->data, true);
+        if (is_string($data)) {
+            $data = json_decode($data, true);
         }
+
+        $this->data = $data;
     }
 
 

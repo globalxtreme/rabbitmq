@@ -17,67 +17,67 @@ class GXRabbitMQManager
     /**
      * @var string
      */
-    protected string $connection = 'rabbitmq';
+    protected $connection = 'rabbitmq';
 
     /**
      * @var string
      */
-    protected string $host = 'default';
+    protected $host = 'default';
 
     /**
      * @var string
      */
-    protected string $exchange = 'direct';
+    protected $exchange = 'direct';
 
     /**
      * @var bool
      */
-    protected bool $ignoreExchangeName = false;
+    protected $ignoreExchangeName = false;
 
     /**
      * @var array
      */
-    protected array $queues = [];
+    protected $queues = [];
 
     /**
      * @var string
      */
-    protected string $key = '';
+    protected $key = '';
 
     /**
      * @var string
      */
-    protected string $consumeClass = 'GlobalXtreme\\RabbitMQ\\Jobs\\RabbitMQMessageJob';
+    protected $consumeClass = 'GlobalXtreme\\RabbitMQ\\Jobs\\RabbitMQMessageJob';
 
     /**
      * @var float
      */
-    protected float $connectionTimeout = 60;
+    protected $connectionTimeout = 60;
 
     /**
      * @var int|null
      */
-    protected int|null $failedId = null;
+    protected $failedId = null;
 
     /**
      * @var string|null
      */
-    protected string|null $failedKey = null;
+    protected $failedKey = null;
 
     /**
      * @var bool|null
      */
-    protected bool|null $repairStatus = null;
+    protected $repairStatus = null;
 
     /**
      * @var \Exception|null
      */
-    protected \Exception|null $exception = null;
+    protected $exception = null;
 
     /**
      * @var array
      */
-    protected array $rabbitmqConf = [];
+    protected $rabbitmqConf = [];
 
     /**
      * @var AMQPStreamConnection
@@ -89,13 +89,25 @@ class GXRabbitMQManager
      */
     protected $AMQPChannel;
 
+    /**
+     * @var array|string
+     */
+    protected $message;
+
+    /**
+     * @var int|null
+     */
+    protected $queueMessageId;
+
 
     /**
      * @param string|array $message
      * @param int|null $queueMessageId
      */
-    public function __construct(protected string|array $message, protected int|null $queueMessageId = null)
+    public function __construct(string|array $message, int|null $queueMessageId = null)
     {
+        $this->message = $message;
+        $this->queueMessageId = $queueMessageId;
     }
 
 
