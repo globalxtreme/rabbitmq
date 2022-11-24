@@ -20,7 +20,7 @@
     "php": "7.*",
     "enqueue/amqp-bunny": "^0.10.9",
     "illuminate/support": "^7.0|^8.0",
-    "vladimir-yuldashev/laravel-queue-rabbitmq": "11.3.*"
+    "vladimir-yuldashev/laravel-queue-rabbitmq": "10.0.*|11.1.*"
   },
   "extra": {
     "laravel": {
