@@ -359,7 +359,11 @@ class GXRabbitMQManager
             $host['user'],
             $host['password'],
             $host['vhost'],
-            connection_timeout: $this->connectionTimeout
+            false,
+            'AMQPLAIN',
+            null,
+            'en_US',
+            $this->connectionTimeout
         );
 
         $this->AMQPChannel = $this->AMQPStreamConnection->channel();

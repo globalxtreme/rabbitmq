@@ -61,7 +61,7 @@ class BaseCodeName
      *
      * @return array|null
      */
-    public static function codeName($code = null): array|null
+    public static function codeName($code = null)
     {
         if (!$code) {
             return null;

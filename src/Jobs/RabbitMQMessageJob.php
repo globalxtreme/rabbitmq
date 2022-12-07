@@ -83,8 +83,8 @@ class RabbitMQMessageJob implements ShouldQueue
             $this->data['key'],
             $this->data['message'],
             $exception,
-            messageId: isset($this->data['messageId']) ? $this->data['messageId'] : null,
-            failedId: isset($this->data['failedId']) ? $this->data['failedId'] : null
+            isset($this->data['messageId']) ? $this->data['messageId'] : null,
+            isset($this->data['failedId']) ? $this->data['failedId'] : null
         );
     }
 
