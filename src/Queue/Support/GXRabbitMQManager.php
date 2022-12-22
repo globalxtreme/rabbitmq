@@ -323,7 +323,7 @@ class GXRabbitMQManager
 
     /** --- SUB FUNCTIONS --- */
 
-    private function saveQueueMessage(mixed $exchange)
+    private function saveQueueMessage($exchange)
     {
         $queueMessage = null;
         if ($this->queueMessageId) {
@@ -338,13 +338,15 @@ class GXRabbitMQManager
         }
 
         if (!$queueMessage) {
-            $queueMessage = GXRabbitMessage::create([
-                'exchange' => $exchange['name'],
-                'queueSender' => $this->rabbitmqConf['queue'],
-                'key' => $this->key,
-                'senderId' => isset($this->message['id']) ? $this->message['id'] : null,
-                'senderType' => isset($this->message['class']) ? $this->message['class'] : null
-            ]);
+            $queueMessage = new GXRabbitMessage();
+
+            $queueMessage->exchange = $exchange['name'];
+            $queueMessage->queueSender = $this->rabbitmqConf['queue'];
+            $queueMessage->key = $this->key;
+            $queueMessage->senderId = isset($this->message['id']) ? $this->message['id'] : null;
+            $queueMessage->senderType = isset($this->message['class']) ? $this->message['class'] : null;
+
+            $queueMessage->save();
         }
 
         return $queueMessage;

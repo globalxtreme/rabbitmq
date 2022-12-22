@@ -42,19 +42,21 @@ class SaveFailedMessage
 
                 if (!$data['failedId']) {
 
-                    $failedQueue = GXRabbitMessageFailed::create([
-                        'messageId' => $this->rabbitMessage->id,
-                        'subject' => $subject,
-                        'queueSender' => $this->rabbitMessage->queueSender,
-                        'queueConsumer' => $data['queue'],
-                        'key' => $data['failedKey'],
-                        'payload' => $data['message'],
-                        'exception' => $data['exception'],
-                    ]);
-                    if ($failedQueue) {
-                        $failedQueue->subject = str_replace('{failed-id}', $failedQueue->id, $failedQueue->subject);
-                        $failedQueue->save();
-                    }
+                    $failedQueue = new GXRabbitMessageFailed();
+
+                    $failedQueue->messageId = $this->rabbitMessage->id;
+                    $failedQueue->subject = $subject;
+                    $failedQueue->queueSender = $this->rabbitMessage->queueSender;
+                    $failedQueue->queueConsumer = $data['queue'];
+                    $failedQueue->key = $data['failedKey'];
+                    $failedQueue->payload = $data['message'];
+                    $failedQueue->exception = $data['exception'];
+
+                    $failedQueue->save();
+                    $failedQueue->refresh();
+
+                    $failedQueue->subject = str_replace('{failed-id}', $failedQueue->id, $failedQueue->subject);
+                    $failedQueue->save();
 
                 } else {
                     $failedQueue = GXRabbitMessageFailed::find($data['failedId']);
