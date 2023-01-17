@@ -10,8 +10,8 @@ class GXRabbitQueueConstant extends BaseCodeName
     const INVENTORY = 'inventory';
 
     const OPTION = [
-        self::CUSTOMER_SUPPORT,
-        self::INVENTORY,
+        self::CUSTOMER_SUPPORT => self::CUSTOMER_SUPPORT,
+        self::INVENTORY => self::INVENTORY,
     ];
 
 }
