@@ -92,8 +92,9 @@ class GXRabbitMQManager
 
     /**
      * @param string|array $message
+     * @param int|null $queueMessageId
      */
-    public function __construct(protected string|array $message)
+    public function __construct(protected string|array $message, protected int|null $queueMessageId = null)
     {
     }
 
@@ -225,11 +226,11 @@ class GXRabbitMQManager
     }
 
     /**
-     * @param \Exception|null $exception
+     * @param \Exception|string|null $exception
      *
      * @return GXRabbitMQManager
      */
-    public function onException(\Exception|null $exception): GXRabbitMQManager
+    public function onException(\Exception|string|null $exception): GXRabbitMQManager
     {
         $this->exception = $exception;
 
@@ -313,7 +314,11 @@ class GXRabbitMQManager
     private function saveQueueMessage(mixed $exchange)
     {
         $queueMessage = null;
-        if ($this->failedId) {
+        if ($this->queueMessageId) {
+            $queueMessage = GXRabbitMessage::find($this->queueMessageId);
+        }
+
+        if ($this->failedId && !$queueMessage) {
             $queueFailed = GXRabbitMessageFailed::find($this->failedId);
             if ($queueFailed) {
                 $queueMessage = $queueFailed->message;
@@ -363,13 +368,23 @@ class GXRabbitMQManager
     {
         $exceptionMessage = [];
         if ($this->failedId || $this->exception) {
+
+            $exception = null;
+            if ($this->exception) {
+                if ($this->exception instanceof \Exception) {
+                    $exception = [
+                        'message' => $this->exception->getMessage(),
+                        'trace' => $this->exception->getTraceAsString(),
+                    ];
+                } else {
+                    $exception = ['message' => $this->exception, 'trace' => ''];
+                }
+            }
+
             $exceptionMessage = [
                 'failedId' => $this->failedId,
                 'success' => ($this->repairStatus !== null) ? $this->repairStatus : null,
-                'exception' => $this->exception ? [
-                    'message' => $this->exception->getMessage(),
-                    'trace' => $this->exception->getTraceAsString(),
-                ] : null,
+                'exception' => $exception,
             ];
         }
 

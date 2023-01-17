@@ -45,6 +45,8 @@ Route::prefix(config('base.conf.prefix.web') . "/$version/$service/message-broke
 
                 Route::get('', 'GXRabbitMessageController@get');
                 Route::get('failed', 'GXRabbitMessageController@getFailed');
+                Route::post('failed/repair', 'GXRabbitMessageController@repairFailed');
+                Route::post('failed/rest', 'GXRabbitMessageController@restFailed');
 
             });
 

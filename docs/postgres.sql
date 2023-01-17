@@ -62,6 +62,7 @@ create table keys
     id              bigserial       primary key,
     "queueId"       integer         not null,
     name            varchar(250)    not null,
+    class           varchar(500)    not null,
     "createdBy"     varchar(50)     null,
     "createdByName" varchar(250)    null,
     "createdAt"     timestamp(0),

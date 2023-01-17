@@ -25,7 +25,7 @@ class RepairFailedMessage
 
             GXRabbitMQQueue::dispatch($this->messageFailed->payload)
                 ->onExchange('failed')
-                ->onQueue($this->messageFailed->queue)
+                ->onQueue($this->messageFailed->queueConsumer)
                 ->onKey($this->messageFailed->key)
                 ->onFailedId($this->messageFailed->id);
 
