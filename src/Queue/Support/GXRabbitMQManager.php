@@ -70,7 +70,7 @@ class GXRabbitMQManager
     protected $repairStatus = null;
 
     /**
-     * @var \Exception|null
+     * @var \Exception|string|null
      */
     protected $exception = null;
 
