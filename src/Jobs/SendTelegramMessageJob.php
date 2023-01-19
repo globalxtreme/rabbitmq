@@ -2,7 +2,7 @@
 
 namespace GlobalXtreme\RabbitMQ\Jobs;
 
-use App\ThirdParty\Telegram;
+use GlobalXtreme\RabbitMQ\ThirdParty\Telegram;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
