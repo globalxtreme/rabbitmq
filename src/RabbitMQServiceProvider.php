@@ -15,6 +15,8 @@ class RabbitMQServiceProvider extends ServiceProvider
 
     public function register()
     {
-        //
+        $this->commands(
+            \GlobalXtreme\RabbitMQ\Command\GXRabbitMQConsumeCommand::class
+        );
     }
 }

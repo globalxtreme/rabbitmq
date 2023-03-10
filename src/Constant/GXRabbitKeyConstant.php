@@ -11,11 +11,7 @@ class GXRabbitKeyConstant
 {
     const MAX_RETRY = 10;
 
-    const FAILED_SAVE = 'failed-save';
-
-    const MESSAGES = [
-        self::FAILED_SAVE => SaveFailedMessage::class,
-    ];
+    const MESSAGES = [];
 
 
     /**
