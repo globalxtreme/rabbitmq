@@ -13,6 +13,14 @@ class GXRabbitQueue extends BaseModel
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
 
 
+    /** --- RELATIONSHIPS --- */
+
+    public function keys(): HasMany
+    {
+        return $this->hasMany(GXRabbitKey::class, 'queueId');
+    }
+
+
     /** --- SCOPES --- */
 
     public function scopeFilter($query, $request)
@@ -29,14 +37,6 @@ class GXRabbitQueue extends BaseModel
     public function scopeOfName($query, $name)
     {
         return $query->where('name', $name);
-    }
-
-
-    /** --- RELATIONSHIPS --- */
-
-    public function keys(): HasMany
-    {
-        return $this->hasMany(GXRabbitKey::class, 'queueId');
     }
 
 }

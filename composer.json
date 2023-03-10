@@ -11,16 +11,11 @@
   "autoload": {
     "psr-4": {
       "GlobalXtreme\\RabbitMQ\\": "src/"
-    },
-    "files": [
-      "src/Helpers/helpers.php"
-    ]
+    }
   },
   "require": {
     "php": "8.*",
     "enqueue/amqp-bunny": "^0.10.9",
-    "globalxtreme/response": "1.1.*",
-    "globalxtreme/validation": "1.1.*",
     "guzzlehttp/guzzle": "^7.2",
     "illuminate/support": "^7.0|^8.0|^9.0",
     "vladimir-yuldashev/laravel-queue-rabbitmq": "^13.0"

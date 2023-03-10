@@ -13,6 +13,14 @@ class GXRabbitKey extends BaseModel
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
 
 
+    /** --- RELATIONSHIPS --- */
+
+    public function queue(): BelongsTo
+    {
+        return $this->belongsTo(GXRabbitQueue::class, 'queueId');
+    }
+
+
     /** --- SCOPES --- */
 
     public function scopeFilter($query, $request)
@@ -38,14 +46,6 @@ class GXRabbitKey extends BaseModel
     public function scopeOfName($query, $name)
     {
         return $query->where('name', $name);
-    }
-
-
-    /** --- RELATIONSHIPS --- */
-
-    public function queue(): BelongsTo
-    {
-        return $this->belongsTo(GXRabbitQueue::class, 'queueId');
     }
 
 }
