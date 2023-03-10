@@ -13,9 +13,7 @@ class GXRabbitKeyConstant
 
     const FAILED_SAVE = 'failed-save';
 
-    const MESSAGES = [
-        self::FAILED_SAVE => SaveFailedMessage::class,
-    ];
+    const MESSAGES = [];
 
 
     /**

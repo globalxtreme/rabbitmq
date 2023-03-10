@@ -11,10 +11,7 @@
   "autoload": {
     "psr-4": {
       "GlobalXtreme\\RabbitMQ\\": "src/"
-    },
-    "files": [
-      "src/Helpers/helpers.php"
-    ]
+    }
   },
   "require": {
     "php": "7.*",
