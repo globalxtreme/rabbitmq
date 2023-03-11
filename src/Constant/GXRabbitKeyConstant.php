@@ -44,6 +44,10 @@ class GXRabbitKeyConstant
             $class = $rabbitKey->class;
         }
 
+        if (!class_exists($class)) {
+            return null;
+        }
+
         return new $class($message);
     }
 
