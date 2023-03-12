@@ -249,15 +249,17 @@ class GXRabbitMQManager
                 $queueStatuses[$queue] = false;
             }
 
-            $queueMessage = GXRabbitMessage::create([
-                'exchange' => $exchange['name'],
-                'queueSender' => $this->rabbitmqConf['queue'],
-                'queueConsumers' => $this->queues,
-                'key' => $this->key,
-                'senderId' => isset($this->message['id']) ? $this->message['id'] : null,
-                'senderType' => isset($this->message['class']) ? $this->message['class'] : null,
-                'statuses' => $queueStatuses
-            ]);
+            $queueMessage = new GXRabbitMessage();
+
+            $queueMessage->exchange = $exchange['name'];
+            $queueMessage->queueSender = $this->rabbitmqConf['queue'];
+            $queueMessage->queueConsumers = $this->queues;
+            $queueMessage->key = $this->key;
+            $queueMessage->senderId = isset($this->message['id']) ? $this->message['id'] : null;
+            $queueMessage->senderType = isset($this->message['class']) ? $this->message['class'] : null;
+            $queueMessage->statuses = $queueStatuses;
+
+            $queueMessage->save();
         }
 
         return $queueMessage;
