@@ -122,6 +122,7 @@ class GXRabbitMQConsumeCommand extends Command
 
             $this->info('SUCCESS:...................................... ' . now()->format('Y-m-d H:i:s'));
         } catch (\Exception $exception) {
+            Log::error($exception);
             $this->logError($exception->getMessage());
         }
     }
@@ -146,14 +147,14 @@ class GXRabbitMQConsumeCommand extends Command
             $exceptionAttribute = ['message' => $exception, 'trace' => ''];
         }
 
-        GXRabbitMessageFailed::create([
-            'messageId' => $this->body['messageId'],
-            'sender' => $this->queueMessage->queueSender,
-            'consumer' => $this->configuration['queue'],
-            'key' => $this->body['key'],
-            'payload' => $this->body['message'],
-            'exception' => $exceptionAttribute,
-        ]);
+        $messageFailed = new GXRabbitMessageFailed();
+        $messageFailed->messageId = $this->body['messageId'];
+        $messageFailed->sender = $this->queueMessage->queueSender;
+        $messageFailed->consumer = $this->configuration['queue'];
+        $messageFailed->key = $this->body['key'];
+        $messageFailed->payload = $this->body['message'];
+        $messageFailed->exception = $exceptionAttribute;
+        $messageFailed->save();
     }
 
     private function updateMessageStatus()
