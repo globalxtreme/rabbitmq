@@ -135,6 +135,7 @@ class GXRabbitMQConsumeCommand extends Command
 
             $this->info('SUCCESS:...................................... ' . now()->format('Y-m-d H:i:s'));
         } catch (\Exception $exception) {
+            Log::error($exception);
             $this->logError($exception->getMessage());
         }
     }
