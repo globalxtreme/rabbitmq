@@ -67,6 +67,16 @@ class GXRabbitMQManager
      */
     protected $AMQPChannel;
 
+    /**
+     * @var array
+     */
+    protected $msgBody = [];
+
+    /**
+     * @var array
+     */
+    protected $msgProperty = [];
+
 
     /**
      * @param string|array $message
@@ -213,19 +223,16 @@ class GXRabbitMQManager
             }
 
             $exchange = $this->rabbitmqConf['exchanges'][$this->exchange];
-            DB::connection(config('gx-rabbitmq.db-connection'))->transaction(function () use ($exchange) {
 
-                $queueMessage = $this->saveQueueMessage($exchange);
+            $this->saveQueueMessage($exchange);
 
-                $this->setAMQPChannel();
+            $this->setAMQPChannel();
 
-                $this->declareExchange($exchange);
+            $this->declareExchange($exchange);
 
-                $this->publishMessage($queueMessage, $exchange);
+            $this->publishMessage($exchange);
 
-                $this->closeConnection();
-
-            });
+            $this->closeConnection();
 
         } catch (\Exception $exception) {
             Log::error($exception);
@@ -249,6 +256,21 @@ class GXRabbitMQManager
                 $queueStatuses[$queue] = false;
             }
 
+            $this->msgBody = [
+                'key' => $this->key,
+                'exchange' => $exchange['name'],
+                'queue' => $this->rabbitmqConf['queue'],
+                'message' => $this->message
+            ];
+
+            $this->msgProperty = [
+                'correlation_id' => Uuid::uuid4()->toString(),
+                'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+                'content_type' => 'application/json'
+            ];
+
+            $payload = ['body' => $this->msgBody, 'properties' => $this->msgProperty];
+
             $queueMessage = new GXRabbitMessage();
 
             $queueMessage->exchange = $exchange['name'];
@@ -258,8 +280,14 @@ class GXRabbitMQManager
             $queueMessage->senderId = isset($this->message['id']) ? $this->message['id'] : null;
             $queueMessage->senderType = isset($this->message['class']) ? $this->message['class'] : null;
             $queueMessage->statuses = $queueStatuses;
+            $queueMessage->payload = $payload;
 
-            $queueMessage->save();
+            if ($queueMessage->save()) {
+                $payload['body']['messageId'] = $queueMessage->id;
+
+                $queueMessage->payload = $payload;
+                $queueMessage->save();
+            }
         }
 
         return $queueMessage;
@@ -295,27 +323,9 @@ class GXRabbitMQManager
         );
     }
 
-    private function publishMessage($queueMessage, array $exchange)
+    private function publishMessage(array $exchange)
     {
-        $body = json_encode([
-            'key' => $this->key,
-            'exchange' => $exchange['name'],
-            'queue' => $this->rabbitmqConf['queue'],
-            'messageId' => $queueMessage->id,
-            'message' => $this->message
-        ]);
-
-        $properties = [
-            'correlation_id' => Uuid::uuid4()->toString(),
-            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-            'content_type' => 'application/json'
-        ];
-
-        if (!$queueMessage->payload) {
-            $queueMessage->update(['payload' => ['body' => json_decode($body, true), 'properties' => $properties]]);
-        }
-
-        $msg = new AMQPMessage($body, $properties);
+        $msg = new AMQPMessage(json_encode($this->msgBody), $this->msgProperty);
         foreach ($this->queues as $queue) {
             $this->AMQPChannel->basic_publish($msg, $exchange['name'], $queue);
         }
