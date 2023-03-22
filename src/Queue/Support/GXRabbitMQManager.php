@@ -284,6 +284,7 @@ class GXRabbitMQManager
 
             if ($queueMessage->save()) {
                 $payload['body']['messageId'] = $queueMessage->id;
+                $this->msgBody['messageId'] = $queueMessage->id;
 
                 $queueMessage->payload = $payload;
                 $queueMessage->save();
