@@ -250,24 +250,25 @@ class GXRabbitMQManager
             $queueMessage = GXRabbitMessage::find($this->queueMessageId);
         }
 
+        $this->msgBody = [
+            'key' => $this->key,
+            'exchange' => $exchange['name'],
+            'queue' => $this->rabbitmqConf['queue'],
+            'message' => $this->message,
+            'messageId' => $this->queueMessageId
+        ];
+
+        $this->msgProperty = [
+            'correlation_id' => Uuid::uuid4()->toString(),
+            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+            'content_type' => 'application/json'
+        ];
+
         if (!$queueMessage) {
             $queueStatuses = [];
             foreach ($this->queues as $queue) {
                 $queueStatuses[$queue] = false;
             }
-
-            $this->msgBody = [
-                'key' => $this->key,
-                'exchange' => $exchange['name'],
-                'queue' => $this->rabbitmqConf['queue'],
-                'message' => $this->message
-            ];
-
-            $this->msgProperty = [
-                'correlation_id' => Uuid::uuid4()->toString(),
-                'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-                'content_type' => 'application/json'
-            ];
 
             $payload = ['body' => $this->msgBody, 'properties' => $this->msgProperty];
 
