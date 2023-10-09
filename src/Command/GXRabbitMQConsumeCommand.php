@@ -103,22 +103,33 @@ class GXRabbitMQConsumeCommand extends Command
             $this->body = json_decode($message->body, true);
 
             $this->queueMessage = GXRabbitMessage::find($this->body['messageId']);
-
-            if (!isset($this->body['key']) || !$this->body['key']) {
-                $this->logError("Your key [{$this->body['key']}] invalid!");
+            if (!$this->queueMessage) {
+                $this->logError("Message Not found [{$this->body['messageId']}]");
                 return;
             }
 
-            $key = $this->body['key'];
-            $service = GXRabbitKeyConstant::callMessageClass($this->queueMessage, $key);
-            if (!$service) {
-                $this->logError("Message broker key does not exists or not yet set service class! [$key]");
-                return;
+            $messageStatuses = $this->queueMessage->statuses ?: [];
+            if (isset($messageStatuses[$this->configuration['queue']])) {
+                if (!$messageStatuses[$this->configuration['queue']]) {
+
+                    if (!isset($this->body['key']) || !$this->body['key']) {
+                        $this->logError("Your key [{$this->body['key']}] invalid!");
+                        return;
+                    }
+
+                    $key = $this->body['key'];
+                    $service = GXRabbitKeyConstant::callMessageClass($this->queueMessage, $key);
+                    if (!$service) {
+                        $this->logError("Message broker key does not exists or not yet set service class! [$key]");
+                        return;
+                    }
+
+                    $service->handle($this->body['message']);
+
+                    $this->updateMessageStatus();
+
+                }
             }
-
-            $service->handle($this->body['message']);
-
-            $this->updateMessageStatus();
 
             $this->info('SUCCESS:...................................... ' . now()->format('Y-m-d H:i:s'));
         } catch (\Exception $exception) {
