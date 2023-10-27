@@ -233,11 +233,6 @@ class GXRabbitMQManager
 
     private function saveQueueMessage(array $exchange)
     {
-        $queueMessage = null;
-        if ($this->queueMessageId) {
-            $queueMessage = GXRabbitMessage::find($this->queueMessageId);
-        }
-
         $this->msgBody = [
             'key' => $this->key,
             'exchange' => $exchange['name'],
@@ -245,6 +240,13 @@ class GXRabbitMQManager
             'message' => $this->message,
             'messageId' => $this->queueMessageId
         ];
+
+        $queueMessage = null;
+        if ($this->queueMessageId) {
+            $queueMessage = GXRabbitMessage::find($this->queueMessageId);
+
+            $this->msgBody['queue'] = $queueMessage?->queueSender;
+        }
 
         $this->msgProperty = [
             'correlation_id' => Uuid::uuid4()->toString(),
