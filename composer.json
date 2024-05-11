@@ -16,9 +16,9 @@
   "require": {
     "php": "8.*",
     "enqueue/amqp-bunny": "^0.10.9",
-    "guzzlehttp/guzzle": "^7.2",
+    "guzzlehttp/guzzle": "^7.2|^7.8",
     "illuminate/support": "^7.0|^8.0|^9.0|^10.0|^11.0",
-    "vladimir-yuldashev/laravel-queue-rabbitmq": "^13.0"
+    "vladimir-yuldashev/laravel-queue-rabbitmq": "^13.0|^v14.0"
   },
   "extra": {
     "laravel": {
