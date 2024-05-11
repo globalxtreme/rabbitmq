@@ -3,8 +3,6 @@
 namespace GlobalXtreme\RabbitMQ\Queue\Support;
 
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
-use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageFailed;
-use GlobalXtreme\RabbitMQ\Models\GXRabbitQueue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Channel\AMQPChannel;
@@ -30,11 +28,6 @@ class GXRabbitMQManager
     protected string $exchange = 'direct';
 
     /**
-     * @var bool
-     */
-    protected bool $ignoreExchangeName = false;
-
-    /**
      * @var array
      */
     protected array $queues = [];
@@ -45,34 +38,9 @@ class GXRabbitMQManager
     protected string $key = '';
 
     /**
-     * @var string
-     */
-    protected string $consumeClass = 'GlobalXtreme\\RabbitMQ\\Jobs\\RabbitMQMessageJob';
-
-    /**
      * @var float
      */
     protected float $connectionTimeout = 60;
-
-    /**
-     * @var int|null
-     */
-    protected int|null $failedId = null;
-
-    /**
-     * @var string|null
-     */
-    protected string|null $failedKey = null;
-
-    /**
-     * @var bool|null
-     */
-    protected bool|null $repairStatus = null;
-
-    /**
-     * @var \Exception|string|null
-     */
-    protected \Exception|string|null $exception = null;
 
     /**
      * @var array
@@ -88,6 +56,16 @@ class GXRabbitMQManager
      * @var AMQPChannel
      */
     protected $AMQPChannel;
+
+    /**
+     * @var array
+     */
+    protected array $msgBody = [];
+
+    /**
+     * @var array
+     */
+    protected array $msgProperty = [];
 
 
     /**
@@ -129,10 +107,9 @@ class GXRabbitMQManager
      *
      * @return GXRabbitMQManager
      */
-    public function onExchange(string $exchange, bool $ignoreExchangeName = false): GXRabbitMQManager
+    public function onExchange(string $exchange): GXRabbitMQManager
     {
         $this->exchange = $exchange;
-        $this->ignoreExchangeName = $ignoreExchangeName;
 
         return $this;
     }
@@ -174,18 +151,6 @@ class GXRabbitMQManager
     }
 
     /**
-     * @param string $consumeClass
-     *
-     * @return GXRabbitMQManager
-     */
-    public function onConsumeClass(string $consumeClass): GXRabbitMQManager
-    {
-        $this->consumeClass = $consumeClass;
-
-        return $this;
-    }
-
-    /**
      * The connection timeout to your host in seconds
      *
      * @param float $connectionTimeout
@@ -195,44 +160,6 @@ class GXRabbitMQManager
     public function connectionTimeout(float $connectionTimeout = 60): GXRabbitMQManager
     {
         $this->connectionTimeout = $connectionTimeout;
-
-        return $this;
-    }
-
-    /**
-     * @param int|null $failedId
-     *
-     * @return GXRabbitMQManager
-     */
-    public function onFailedId(int|null $failedId): GXRabbitMQManager
-    {
-        $this->failedId = $failedId;
-
-        return $this;
-    }
-
-    /**
-     * @param string|null $failedKey
-     * @param bool|null $repairStatus
-     *
-     * @return $this
-     */
-    public function onFailedKey(string|null $failedKey, bool|null $repairStatus = null): GXRabbitMQManager
-    {
-        $this->failedKey = $failedKey;
-        $this->repairStatus = $repairStatus;
-
-        return $this;
-    }
-
-    /**
-     * @param \Exception|string|null $exception
-     *
-     * @return GXRabbitMQManager
-     */
-    public function onException(\Exception|string|null $exception): GXRabbitMQManager
-    {
-        $this->exception = $exception;
 
         return $this;
     }
@@ -269,16 +196,11 @@ class GXRabbitMQManager
             }
 
             if (count($this->queues) == 0) {
-                $this->onExchange('fanout', $this->ignoreExchangeName);
+                $this->logError("Please set your queue(s) first!");
+                return;
             }
 
-            if ($this->ignoreExchangeName) {
-                $exchange = collect($this->rabbitmqConf['exchanges'])->where('name', $this->exchange)->first();
-            } else {
-                $exchange = $this->rabbitmqConf['exchanges'][$this->exchange];
-            }
-
-            if (!$exchange || (is_array($exchange) && count($exchange) == 0)) {
+            if (!isset($this->rabbitmqConf['exchanges'][$this->exchange])) {
                 $this->logError("Exchange [$this->exchange] not found. Please set your exchange in your configuration!");
                 return;
             }
@@ -288,19 +210,17 @@ class GXRabbitMQManager
                 return;
             }
 
-            DB::connection(config('gx-rabbitmq.db-connection'))->transaction(function () use ($exchange) {
+            $exchange = $this->rabbitmqConf['exchanges'][$this->exchange];
 
-                $queueMessage = $this->saveQueueMessage($exchange);
+            $this->saveQueueMessage($exchange);
 
-                $this->setAMQPChannel();
+            $this->setAMQPChannel();
 
-                $this->declareExchange($exchange);
+            $this->declareExchange($exchange);
 
-                $this->publishMessage($queueMessage, $exchange);
+            $this->publishMessage($exchange);
 
-                $this->closeConnection();
-
-            });
+            $this->closeConnection();
 
         } catch (\Exception $exception) {
             Log::error($exception);
@@ -311,28 +231,54 @@ class GXRabbitMQManager
 
     /** --- SUB FUNCTIONS --- */
 
-    private function saveQueueMessage(mixed $exchange)
+    private function saveQueueMessage(array $exchange)
     {
+        $this->msgBody = [
+            'key' => $this->key,
+            'exchange' => $exchange['name'],
+            'queue' => $this->rabbitmqConf['queue'],
+            'message' => $this->message,
+            'messageId' => $this->queueMessageId
+        ];
+
         $queueMessage = null;
         if ($this->queueMessageId) {
             $queueMessage = GXRabbitMessage::find($this->queueMessageId);
+
+            $this->msgBody['queue'] = $queueMessage?->queueSender;
         }
 
-        if ($this->failedId && !$queueMessage) {
-            $queueFailed = GXRabbitMessageFailed::find($this->failedId);
-            if ($queueFailed) {
-                $queueMessage = $queueFailed->message;
-            }
-        }
+        $this->msgProperty = [
+            'correlation_id' => Uuid::uuid4()->toString(),
+            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
+            'content_type' => 'application/json'
+        ];
 
         if (!$queueMessage) {
+            $queueStatuses = [];
+            foreach ($this->queues as $queue) {
+                $queueStatuses[$queue] = false;
+            }
+
+            $payload = ['body' => $this->msgBody, 'properties' => $this->msgProperty];
+
             $queueMessage = GXRabbitMessage::create([
                 'exchange' => $exchange['name'],
                 'queueSender' => $this->rabbitmqConf['queue'],
+                'queueConsumers' => $this->queues,
                 'key' => $this->key,
                 'senderId' => isset($this->message['id']) ? $this->message['id'] : null,
-                'senderType' => isset($this->message['class']) ? $this->message['class'] : null
+                'senderType' => isset($this->message['class']) ? $this->message['class'] : null,
+                'statuses' => $queueStatuses,
+                'payload' => $payload
             ]);
+            if ($queueMessage) {
+                $payload['body']['messageId'] = $queueMessage->id;
+                $this->msgBody['messageId'] = $queueMessage->id;
+
+                $queueMessage->payload = $payload;
+                $queueMessage->save();
+            }
         }
 
         return $queueMessage;
@@ -353,7 +299,7 @@ class GXRabbitMQManager
         $this->AMQPChannel = $this->AMQPStreamConnection->channel();
     }
 
-    private function declareExchange($exchange)
+    private function declareExchange(array $exchange)
     {
         $this->AMQPChannel->exchange_declare(
             $exchange['name'],
@@ -364,75 +310,11 @@ class GXRabbitMQManager
         );
     }
 
-    private function publishMessage($queueMessage, $exchange)
+    private function publishMessage(array $exchange)
     {
-        $exceptionMessage = [];
-        if ($this->failedId || $this->exception) {
-
-            $exception = null;
-            if ($this->exception) {
-                if ($this->exception instanceof \Exception) {
-                    $exception = [
-                        'message' => $this->exception->getMessage(),
-                        'trace' => $this->exception->getTraceAsString(),
-                    ];
-                } else {
-                    $exception = ['message' => $this->exception, 'trace' => ''];
-                }
-            }
-
-            $exceptionMessage = [
-                'failedId' => $this->failedId,
-                'success' => ($this->repairStatus !== null) ? $this->repairStatus : null,
-                'exception' => $exception,
-            ];
-        }
-
-        $body = json_encode([
-            'uuid' => Uuid::uuid4()->toString(),
-            'displayName' => $this->consumeClass,
-            'job' => "Illuminate\\Queue\\CallQueuedHandler@call",
-            'data' => [
-                'commandName' => $this->consumeClass,
-                'command' => serialize(new $this->consumeClass([
-                        'key' => $this->key,
-                        'failedKey' => $this->failedKey,
-                        'exchange' => $exchange['name'],
-                        'queue' => $this->rabbitmqConf['queue'],
-                        'messageId' => $queueMessage->id,
-                        'message' => $this->message
-                    ] + $exceptionMessage))
-            ]
-        ]);
-
-        $properties = [
-            'correlation_id' => Uuid::uuid4()->toString(),
-            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-            'content_type' => 'application/json'
-        ];
-
-        if (!$queueMessage->payload) {
-            $queueMessage->update(['payload' => ['body' => json_decode($body, true), 'properties' => $properties]]);
-        }
-
-        if (!$queueMessage->queueConsumers) {
-            if (count($this->queues) == 0) {
-                $queues = GXRabbitQueue::select('name')->get()->pluck('name')->toArray();
-            } else {
-                $queues = $this->queues;
-            }
-
-            $queueMessage->update(['queueConsumers' => $queues]);
-        }
-
-        $msg = new AMQPMessage($body, $properties);
-
-        if (count($this->queues) == 0) {
-            $this->AMQPChannel->basic_publish($msg, $exchange['name']);
-        } else {
-            foreach ($this->queues as $queue) {
-                $this->AMQPChannel->basic_publish($msg, $exchange['name'], $queue);
-            }
+        $msg = new AMQPMessage(json_encode($this->msgBody), $this->msgProperty);
+        foreach ($this->queues as $queue) {
+            $this->AMQPChannel->basic_publish($msg, $exchange['name'], $queue);
         }
     }
 

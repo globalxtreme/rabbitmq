@@ -3,6 +3,7 @@
 namespace GlobalXtreme\RabbitMQ\Models;
 
 use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class GXRabbitMessage extends BaseModel
@@ -14,7 +15,22 @@ class GXRabbitMessage extends BaseModel
     protected $casts = [
         'queueConsumers' => 'array',
         'payload' => 'array',
+        'statuses' => 'array',
+        'finished' => 'boolean',
     ];
+
+
+    /** --- RELATIONSHIPS --- */
+
+    public function sender(): MorphTo
+    {
+        return $this->morphTo('sender', 'senderType', 'senderId');
+    }
+
+    public function faileds(): HasMany
+    {
+        return $this->hasMany(GXRabbitMessageFailed::class, 'messageId');
+    }
 
 
     /** --- SCOPES --- */
@@ -36,14 +52,6 @@ class GXRabbitMessage extends BaseModel
             }
 
         });
-    }
-
-
-    /** --- RELATIONSHIPS --- */
-
-    public function sender(): MorphTo
-    {
-        return $this->morphTo('sender', 'senderType', 'senderId');
     }
 
 }

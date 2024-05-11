@@ -17,6 +17,14 @@ class GXRabbitMessageFailed extends BaseModel
     ];
 
 
+    /** --- RELATIONSHIPS --- */
+
+    public function message(): BelongsTo
+    {
+        return $this->belongsTo(GXRabbitMessage::class, 'messageId');
+    }
+
+
     /** --- SCOPES --- */
 
     public function scopeFilter($query, $request)
@@ -48,14 +56,6 @@ class GXRabbitMessageFailed extends BaseModel
             }
 
         });
-    }
-
-
-    /** --- RELATIONSHIPS --- */
-
-    public function message(): BelongsTo
-    {
-        return $this->belongsTo(GXRabbitMessage::class, 'messageId');
     }
 
 }

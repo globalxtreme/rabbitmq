@@ -11,12 +11,12 @@ class RabbitMQServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../config/gx-rabbitmq' => config_path('gx-rabbitmq.php'),
         ], 'gx-rabbitmq-config');
-
-        $this->loadRoutesFrom(__DIR__.'/../src/Http/routes.php');
     }
 
     public function register()
     {
-        //
+        $this->commands(
+            \GlobalXtreme\RabbitMQ\Command\GXRabbitMQConsumeCommand::class
+        );
     }
 }
