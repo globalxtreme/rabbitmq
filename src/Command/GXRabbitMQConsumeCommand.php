@@ -95,7 +95,22 @@ class GXRabbitMQConsumeCommand extends Command
         $connection = new AMQPStreamConnection($host['host'], $host['port'], $host['user'], $host['password']);
         $this->channel = $connection->channel();
 
-        $this->channel->queue_declare($this->configuration['queue'], false, true, false, false);
+        $exchanges =  config('queue.connections.rabbitmq.exchanges');
+
+        foreach ($exchanges as $exchange) {
+
+            $this->channel->exchange_declare(
+                $exchange['name'], 
+                $exchange['type'], 
+                $exchange['passive'], 
+                $exchange['durable'], 
+                $exchange['auto_delete']
+            );
+
+            $this->channel->queue_declare($this->configuration['queue'], false, true, false, false);
+
+            $this->channel->queue_bind($this->configuration['queue'], $exchange['name'], $exchange['route-key']);
+        }
     }
 
     private function consume()
