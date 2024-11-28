@@ -195,10 +195,10 @@ class GXRabbitMQManager
                 return;
             }
 
-            if (count($this->queues) == 0) {
-                $this->logError("Please set your queue(s) first!");
-                return;
-            }
+            // if (count($this->queues) == 0) {
+            //     $this->logError("Please set your queue(s) first!");
+            //     return;
+            // }
 
             if (!isset($this->rabbitmqConf['exchanges'][$this->exchange])) {
                 $this->logError("Exchange [$this->exchange] not found. Please set your exchange in your configuration!");
@@ -313,8 +313,13 @@ class GXRabbitMQManager
     private function publishMessage(array $exchange)
     {
         $msg = new AMQPMessage(json_encode($this->msgBody), $this->msgProperty);
-        foreach ($this->queues as $queue) {
-            $this->AMQPChannel->basic_publish($msg, $exchange['name'], $queue);
+
+        if (count($this->queues) == 0) {
+            $this->AMQPChannel->basic_publish($msg, $exchange['name']);
+        }else{
+            foreach ($this->queues as $queue) {
+                $this->AMQPChannel->basic_publish($msg, $exchange['name'], $queue);
+            }
         }
     }
 
