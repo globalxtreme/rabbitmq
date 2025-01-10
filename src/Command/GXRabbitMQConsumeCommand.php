@@ -100,10 +100,10 @@ class GXRabbitMQConsumeCommand extends Command
         foreach ($exchanges as $exchange) {
 
             $this->channel->exchange_declare(
-                $exchange['name'], 
-                $exchange['type'], 
-                $exchange['passive'], 
-                $exchange['durable'], 
+                $exchange['name'],
+                $exchange['type'],
+                $exchange['passive'],
+                $exchange['durable'],
                 $exchange['auto_delete']
             );
 
@@ -136,28 +136,21 @@ class GXRabbitMQConsumeCommand extends Command
                 return;
             }
 
-            $messageStatuses = $this->queueMessage->statuses ?: [];
-            if (isset($messageStatuses[$this->configuration['queue']])) {
-                if (!$messageStatuses[$this->configuration['queue']]) {
-
-                    if (!isset($this->body['key']) || !$this->body['key']) {
-                        $this->logError("Your key [{$this->body['key']}] invalid!");
-                        return;
-                    }
-
-                    $key = $this->body['key'];
-                    $service = GXRabbitKeyConstant::callMessageClass($this->queueMessage, $key);
-                    if (!$service) {
-                        $this->logError("Message broker key does not exists or not yet set service class! [$key]");
-                        return;
-                    }
-
-                    $service->handle($this->body['message']);
-
-                    $this->updateMessageStatus();
-
-                }
+            if (!isset($this->body['key']) || !$this->body['key']) {
+                $this->logError("Your key [{$this->body['key']}] invalid!");
+                return;
             }
+
+            $key = $this->body['key'];
+            $service = GXRabbitKeyConstant::callMessageClass($this->queueMessage, $key);
+            if (!$service) {
+                $this->logError("Message broker key does not exists or not yet set service class! [$key]");
+                return;
+            }
+
+            $service->handle($this->body['message']);
+
+            $this->updateMessageStatus();
 
             $this->info('SUCCESS:...................................... ' . now()->format('Y-m-d H:i:s'));
         } catch (\Exception $exception) {
@@ -198,19 +191,25 @@ class GXRabbitMQConsumeCommand extends Command
 
     private function updateMessageStatus()
     {
-        $statuses = $this->queueMessage->statuses;
-        $statuses[$this->configuration['queue']] = true;
-
         $finished = true;
-        foreach ($statuses as $status) {
-            if (!$status) {
-                $finished = false;
-                break;
+
+        $messageStatuses = $this->queueMessage->statuses ?: [];
+        if (isset($messageStatuses[$this->configuration['queue']])) {
+            if (!$messageStatuses[$this->configuration['queue']]) {
+                $statuses[$this->configuration['queue']] = true;
+
+                foreach ($statuses as $status) {
+                    if (!$status) {
+                        $finished = false;
+                        break;
+                    }
+                }
+
+                $this->queueMessage->statuses = $statuses;
             }
         }
 
         $this->queueMessage->finished = $finished;
-        $this->queueMessage->statuses = $statuses;
         $this->queueMessage->save();
     }
 
