@@ -35,24 +35,20 @@ class GXRabbitMessageFailed extends BaseModel
                 $query->where('messageId', $request->messageId);
             }
 
+            if ($request->service) {
+                $query->where('service', $request->service);
+            }
+
+            if ($request->exchange) {
+                $query->where('exchange', $request->exchange);
+            }
+
             if ($request->queue) {
                 $query->where('queue', $request->queue);
             }
 
-            if ($request->key) {
-                $query->where('key', $request->key);
-            }
-
-            if ($request->repaired != '') {
-                $query->where('repaired', $request->repaired);
-            }
-
-            if ($request->rested != '') {
-                $query->where('rested', $request->rested);
-            }
-
-            if ($this->hasSearch($request)) {
-                $query->where('subject', 'LIKE', "%$request->search%");
+            if ($request->resend != '') {
+                $query->where('resend', $request->resend);
             }
 
         });
