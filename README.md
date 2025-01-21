@@ -97,6 +97,7 @@ php artisan make:message-broker WorkOrder\\WorkOrderCreateConsumer
 /** --- CONSUMER --- */
 
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXRabbitMQConsumerContract;
 use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQConsumer;
 use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQPublish;
@@ -129,14 +130,22 @@ GXRabbitMQPublish::dispatch(['message' => "Hallo $exchange Exchange"])
 // Kirim ke rabbitmq local
 $queue = "business.product.variant.report.generate.queue";
 GXRabbitMQPublish::dispatch(['message' => "Hallo $queue Queue"])
-    ->onConnectionType(GXRabbitConnectionType::LOCAL)
+    ->onConnection(GXRabbitConnectionType::LOCAL)
     ->onQueue($queue);
 
 // Kirim dengan default timeout saat publish message
 $queue = "business.product.variant.report.generate.queue";
 GXRabbitMQPublish::dispatch(['message' => "Hallo $queue Queue"])
-    ->onConnectionType(GXRabbitConnectionType::LOCAL)
+    ->onConnection(GXRabbitConnectionType::LOCAL)
     ->connectionTimeout(60 * 60) // 1 Jam
+    ->onQueue($queue);
+    
+// Kirim dengan connection yang ada di database
+// Biasanya yang menggunakan hanya message broker untuk resend message yang gagal consume
+$connection = GXRabbitConnection::first();
+$queue = "business.product.variant.report.generate.queue";
+GXRabbitMQPublish::dispatch(['message' => "Hallo $queue Queue"])
+    ->onConnection($connection)
     ->onQueue($queue);
 
 
