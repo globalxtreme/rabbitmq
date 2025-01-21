@@ -6,7 +6,7 @@ GlobalXtreme RabbitMQ
 ### Standar Penulisan exchange & queue:
 Exhange: <-service->-<-domain / feature->-<-sub feature->-<-action->-exchange\
 Queue: <-service->-<-domain / feature->-<-sub feature->-<-action->-queue\
-Example: [Publish & Consume](https://github.com/globalxtreme/rabbitmq/tree/v2.1/src/example/Example.php)
+Example: [Publish & Consume](https://github.com/globalxtreme/rabbitmq/tree/v2.1/example/Example.php)
 
 
 ## Configuration:
