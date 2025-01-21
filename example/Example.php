@@ -9,13 +9,13 @@ class Example
 {
     public function publish()
     {
-        $queues = ['inventory-test1', 'inventory-test2'];
+        $queues = ['business.product.variant.justification.create.queue', 'business.notification.employee.push.queue'];
         foreach ($queues as $queue) {
             GXRabbitMQPublish::dispatch(['message' => "hallow Queue? $queue"])
                 ->onQueue($queue);
         }
 
-        $exchanges = ['business.product.justification', 'business.product.variant'];
+        $exchanges = ['business.product.variant.justification.approval.exchange', 'business.product.variant.update.exchange'];
         foreach ($exchanges as $exchange) {
             GXRabbitMQPublish::dispatch(['message' => "hallow Exchange? $exchange"])
                 ->onExchange($exchange);
@@ -27,13 +27,13 @@ class Example
         $consumer = new GXRabbitMQConsumer();
 
         $consumer->setExchanges([
-            'business.product.justification' => TestingOneConsumer::class,
-            'business.product.variant' => TestingTwoConsumer::class,
+            'business.product.variant.justification.approval.exchange' => TestingOneConsumer::class,
+            'business.product.variant.update.exchange' => TestingTwoConsumer::class,
         ]);
 
         $consumer->setQueues([
-            'inventory-test1' => TestingOneConsumer::class,
-            'inventory-test2' => TestingTwoConsumer::class,
+            'business.product.variant.justification.create.queue' => TestingOneConsumer::class,
+            'business.notification.employee.push.queue-' => TestingTwoConsumer::class,
         ]);
 
         $consumer->consume();

@@ -2,6 +2,7 @@
 
 namespace GlobalXtreme\RabbitMQ\Queue;
 
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageFailed;
@@ -55,13 +56,13 @@ class GXRabbitMQConsumer
 
     /** --- ACTION --- */
 
-    public function consume(string $connectionType = "global")
+    public function consume(string $connectionType = GXRabbitConnectionType::GLOBAL)
     {
         $configuration = config("gx-rabbitmq.connection.types.$connectionType");
 
         $this->GXRabbitConnection = GXRabbitConnection::where('connection', $connectionType)
             ->where(function ($query) use ($connectionType) {
-                if ($connectionType != "global") {
+                if ($connectionType != GXRabbitConnectionType::GLOBAL) {
                     $query->where('service', config('base.conf.service'));
                 }
             })->first();

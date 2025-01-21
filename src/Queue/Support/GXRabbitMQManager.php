@@ -2,6 +2,7 @@
 
 namespace GlobalXtreme\RabbitMQ\Queue\Support;
 
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +14,7 @@ class GXRabbitMQManager
     /**
      * @var string
      */
-    protected string $connectionType = 'global';
+    protected string $connectionType = GXRabbitConnectionType::GLOBAL;
 
     /**
      * @var string
@@ -165,7 +166,7 @@ class GXRabbitMQManager
     {
         return GXRabbitConnection::where('connection', $this->connectionType)
             ->where(function ($query) {
-                if ($this->connectionType != 'global') {
+                if ($this->connectionType != GXRabbitConnectionType::GLOBAL) {
                     $query->where('service', config('base.conf.service'));
                 }
             })
