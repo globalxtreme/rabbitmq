@@ -22,7 +22,7 @@ class BaseModel extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->setConnection(config('gx-rabbitmq.db-connection'));
+        $this->setConnection(config('gx-rabbitmq.connection.database'));
     }
 
 
