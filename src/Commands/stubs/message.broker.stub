@@ -6,16 +6,8 @@ use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXRabbitMQConsumerContract;
 use Illuminate\Support\Facades\Log;
 
-class {{ class }} implement implements GXRabbitMQConsumerContract
+class {{ class }} implements GXRabbitMQConsumerContract
 {
-    /**
-     * @param GXRabbitMessage $rabbitMessage
-     */
-    public function __construct(protected GXRabbitMessage $rabbitMessage)
-    {
-    }
-
-
     /**
      * The service for handle process of message
      * Please don't use try catch. For handle failed process in BaseQueueJob
