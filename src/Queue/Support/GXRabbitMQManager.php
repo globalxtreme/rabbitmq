@@ -54,7 +54,7 @@ class GXRabbitMQManager
 
     /**
      * @param string|array $message
-     * @param int|null $queueMessage
+     * @param GXRabbitMessage|int|null $queueMessage
      */
     public function __construct(protected string|array $message, protected GXRabbitMessage|int|null $queueMessage = null)
     {
