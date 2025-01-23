@@ -88,7 +88,7 @@ RABBITMQ_LOCAL_PASSWORD=root
 ### 4. Consumer generator
 ```shell
 # Command ini untuk generate consumer class
-php artisan make:message-broker WorkOrder\\WorkOrderCreateConsumer
+php artisan make:rabbitmq-consumer WorkOrder\\WorkOrderCreateConsumer
 ```
 
 ### 5. Cara penggunaan
