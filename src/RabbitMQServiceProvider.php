@@ -17,4 +17,11 @@ class RabbitMQServiceProvider extends ServiceProvider
             __DIR__.'/Commands/RabbitMQLocalCommand.php' => app_path('/Console/Commands/MessageBroker/RabbitMQLocalCommand.php'),
         ], 'gx-rabbitmq-command');
     }
+
+    public function register()
+    {
+        $this->commands(
+            \GlobalXtreme\RabbitMQ\Commands\RabbitMQConsumerMakeCommand::class
+        );
+    }
 }

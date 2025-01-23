@@ -4,7 +4,6 @@ namespace {{ namespace }};
 
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXRabbitMQConsumerContract;
-use Illuminate\Support\Facades\Log;
 
 class {{ class }} implements GXRabbitMQConsumerContract
 {
