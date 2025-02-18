@@ -106,13 +106,17 @@ class GXRabbitMQConsumer
             });
         }
 
-        try {
-            $channel->consume();
-        } catch (\Throwable $exception) {
-            Log::error($exception);
-        } finally {
+        register_shutdown_function(function ($channel, $connection) {
             $channel->close();
             $connection->close();
+        }, $channel, $connection);
+
+        try {
+            while (count($channel->callbacks)) {
+                $channel->wait();
+            }
+        } catch (\Throwable $exception) {
+            Log::error($exception);
         }
     }
 
