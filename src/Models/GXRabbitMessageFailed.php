@@ -8,12 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class GXRabbitMessageFailed extends BaseModel
 {
     protected $table = 'message_faileds';
-    protected $guarded = [''];
+    protected $fillable = [
+        'connectionId',
+        'messageId',
+        'service',
+        'exchange',
+        'queue',
+        'payload',
+        'exception',
+    ];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
     protected $casts = [
         'payload' => 'array',
         'exception' => 'array',
+        'resend' => 'boolean',
     ];
 
 

@@ -4,9 +4,9 @@ namespace GlobalXtreme\RabbitMQ\Models;
 
 use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
 
-class GXRabbitQueue extends BaseModel
+class GXRabbitExchange extends BaseModel
 {
-    protected $table = 'queues';
+    protected $table = 'exchanges';
     protected $guarded = ['id'];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];

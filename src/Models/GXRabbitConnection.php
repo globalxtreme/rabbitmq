@@ -7,7 +7,10 @@ use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
 class GXRabbitConnection extends BaseModel
 {
     protected $table = 'connections';
-    protected $guarded = [''];
+    protected $fillable = [
+        'connection',
+        'service'
+    ];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
 
