@@ -13,9 +13,7 @@ class GXRabbitMessage extends BaseModel
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
     protected $casts = [
-        'queueConsumers' => 'array',
         'payload' => 'array',
-        'statuses' => 'array',
         'finished' => 'boolean',
     ];
 
@@ -45,10 +43,6 @@ class GXRabbitMessage extends BaseModel
 
             if ($request->queue) {
                 $query->where('queue', $request->queue);
-            }
-
-            if ($request->key) {
-                $query->where('key', $request->key);
             }
 
         });

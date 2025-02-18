@@ -4,9 +4,9 @@ namespace GlobalXtreme\RabbitMQ\Models;
 
 use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
 
-class GXRabbitExchange extends BaseModel
+class GXRabbitConnection extends BaseModel
 {
-    protected $table = 'exchanges';
+    protected $table = 'connections';
     protected $guarded = [''];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
@@ -19,7 +19,8 @@ class GXRabbitExchange extends BaseModel
         return $query->where(function ($query) use ($request) {
 
             if ($this->hasSearch($request)) {
-                $query->where('name', 'LIKE', "%$request->search%");
+                $query->where('service', 'LIKE', "%$request->search%")
+                    ->where('IP', 'LIKE', "%$request->search%");
             }
 
         });

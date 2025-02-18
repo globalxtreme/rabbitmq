@@ -3,7 +3,6 @@
 namespace GlobalXtreme\RabbitMQ\Models;
 
 use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class GXRabbitQueue extends BaseModel
 {
@@ -11,14 +10,6 @@ class GXRabbitQueue extends BaseModel
     protected $guarded = [''];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
-
-
-    /** --- RELATIONSHIPS --- */
-
-    public function keys(): HasMany
-    {
-        return $this->hasMany(GXRabbitKey::class, 'queueId');
-    }
 
 
     /** --- SCOPES --- */
