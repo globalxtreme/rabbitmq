@@ -7,9 +7,12 @@ use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
 class GXRabbitExchange extends BaseModel
 {
     protected $table = 'exchanges';
-    protected $guarded = [''];
+    protected $guarded = ['id'];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
+    protected $casts = [
+        'payload' => 'array'
+    ];
 
 
     /** --- SCOPES --- */
@@ -23,6 +26,11 @@ class GXRabbitExchange extends BaseModel
             }
 
         });
+    }
+
+    public function scopeOfName($query, $name)
+    {
+        return $query->where('name', $name);
     }
 
 }
