@@ -18,7 +18,8 @@ class Example
         $exchanges = ['business.product.variant.justification.approval.exchange', 'business.product.variant.update.exchange'];
         foreach ($exchanges as $exchange) {
             GXRabbitMQPublish::dispatch(['message' => "hallow Exchange? $exchange"])
-                ->onExchange($exchange);
+                ->onExchange($exchange)
+                ->onDeliveries(['customers', 'inventories']);
         }
     }
 
@@ -46,13 +47,17 @@ class TestingOneConsumer implements GXRabbitMQConsumerContract
     /**
      * @param array|string $data
      *
-     * @return void
+     * @return array|null
      */
     public static function consume($data)
     {
         Log::info("Testing One");
         Log::info($data);
         Log::info("=========");
+
+        return [
+            'name' => 'John Doe',
+        ];
     }
 }
 
@@ -61,12 +66,16 @@ class TestingTwoConsumer implements GXRabbitMQConsumerContract
     /**
      * @param array|string $data
      *
-     * @return void
+     * @return array|null
      */
     public static function consume($data)
     {
         Log::info("Testing two");
         Log::info($data);
         Log::info("=========");
+
+        return [
+            'success' => true
+        ];
     }
 }

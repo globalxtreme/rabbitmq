@@ -3,6 +3,7 @@
 namespace GlobalXtreme\RabbitMQ\Queue\Support;
 
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use Illuminate\Support\Facades\Log;
@@ -54,7 +55,7 @@ class GXRabbitMQManager
     /**
      * @var array
      */
-    protected $payload = [];
+    protected $payload = [], $deliveries = [];
 
     /**
      * @var bool
@@ -125,6 +126,18 @@ class GXRabbitMQManager
     public function onQueue(string $queue): GXRabbitMQManager
     {
         $this->queue = $queue;
+
+        return $this;
+    }
+
+    /**
+     * @param array $deliveries
+     *
+     * @return GXRabbitMQManager
+     */
+    public function onDeliveries(array $deliveries): GXRabbitMQManager
+    {
+        $this->deliveries = $deliveries;
 
         return $this;
     }
@@ -269,6 +282,7 @@ class GXRabbitMQManager
                 'connectionId' => $this->GXRabbitConnection->id,
                 'exchange' => $this->exchange,
                 'queue' => $this->queue,
+                'finished' => (!$this->queue && $this->exchange),
                 'senderId' => isset($this->message['id']) ? $this->message['id'] : null,
                 'senderType' => isset($this->message['class']) ? $this->message['class'] : null,
                 'senderService' => config('base.conf.service'),
@@ -279,6 +293,15 @@ class GXRabbitMQManager
 
                 $this->queueMessage->payload = $this->payload;
                 $this->queueMessage->save();
+
+                if (count($this->deliveries) > 0) {
+                    foreach ($this->deliveries as $delivery) {
+                        $this->queueMessage->deliveries()->updateOrCreate(
+                            ['consumerService' => $delivery],
+                            ['statusId' => GXRabbitMessageDeliveryStatus::PENDING_ID]
+                        );
+                    }
+                }
             }
         }
     }

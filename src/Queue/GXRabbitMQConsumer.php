@@ -3,6 +3,7 @@
 namespace GlobalXtreme\RabbitMQ\Queue;
 
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageFailed;
@@ -127,6 +128,7 @@ class GXRabbitMQConsumer
     {
         Log::info("RABBITMQ-CONSUMING: $consumer " . now()->format('Y-m-d H:i:s'));
 
+        $queueMessage = null;
         $messageId = null;
         $data = null;
 
@@ -136,27 +138,40 @@ class GXRabbitMQConsumer
             $messageId = $body['messageId'];
             $data = $body['data'];
 
-            $queueMessage = GXRabbitMessage::find($body['messageId']);
+            $messageQuery = GXRabbitMessage::query();
+            if ($serviceName = env('SERVICE_NAME')) {
+                $messageQuery->with([
+                    'deliveries' => function ($query) use ($serviceName) {
+                        $query->where('service', $serviceName);
+                    }
+                ]);
+            }
+
+            $queueMessage = $messageQuery->find($body['messageId']);
             if (!$queueMessage) {
                 $this->failedConsuming($consumer, $exchange, $queue, $messageId, $data, "Message Not found [{$body['messageId']}]");
                 return;
             }
 
-            $consumer::consume($data);
+            $response = $consumer::consume($data);
 
-            $this->successConsuming($consumer, $queueMessage);
+            $this->successConsuming($consumer, $queueMessage, $response);
 
-        } catch (\Exception $exception) {
-            $this->failedConsuming($consumer, $exchange, $queue, $messageId, $data, $exception->getMessage());
-            Log::error($exception);
+        } catch (\Throwable $throwable) {
+            if (!$queueMessage) {
+                $queueMessage = $messageId;
+            }
+
+            $this->failedConsuming($consumer, $exchange, $queue, $queueMessage, $data, $throwable->getMessage());
+            Log::error($throwable);
         }
     }
 
-    private function failedConsuming($consumer, $exchange, $queue, $messageId, $data, $exception)
+    private function failedConsuming($consumer, $exchange, $queue, $message, $data, $exception)
     {
         Log::error("RABBITMQ-FAILED: $consumer " . now()->format('Y-m-d H:i:s'));
 
-        if ($messageId) {
+        if ($message) {
             if ($exception instanceof \Exception) {
                 $exceptionAttribute = [
                     'message' => $exception->getMessage(),
@@ -164,6 +179,24 @@ class GXRabbitMQConsumer
                 ];
             } else {
                 $exceptionAttribute = ['message' => $exception, 'trace' => ''];
+            }
+
+            if ($message instanceof GXRabbitMessage) {
+                $messageId = $message->id;
+
+                if ($messageDelivery = $message->deliveries->first()) {
+                    if (count($exceptionAttribute) > 0) {
+                        $responses = $messageDelivery->responses;
+                        $responses[] = $exceptionAttribute;
+
+                        $messageDelivery->responses = $responses;
+                    }
+
+                    $messageDelivery->statusId = GXRabbitMessageDeliveryStatus::ERROR_ID;
+                    $messageDelivery->save();
+                }
+            } else {
+                $messageId = $message;
             }
 
             GXRabbitMessageFailed::create([
@@ -178,10 +211,22 @@ class GXRabbitMQConsumer
         }
     }
 
-    private function successConsuming($consumer, $queueMessage)
+    private function successConsuming($consumer, $queueMessage, $response = null)
     {
         $queueMessage->finished = true;
         $queueMessage->save();
+
+        if ($messageDelivery = $queueMessage->deliveries->first()) {
+            if ($response && (is_array($response) && count($response) > 0)) {
+                $responses = $messageDelivery->responses;
+                $responses[] = $response;
+
+                $messageDelivery->responses = $responses;
+            }
+
+            $messageDelivery->statusId = GXRabbitMessageDeliveryStatus::FINISH_ID;
+            $messageDelivery->save();
+        }
 
         Log::info("RABBITMQ-SUCCESS: $consumer " . now()->format('Y-m-d H:i:s'));
     }

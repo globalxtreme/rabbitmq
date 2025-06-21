@@ -39,6 +39,11 @@ class GXRabbitMessage extends BaseModel
         return $this->hasMany(GXRabbitMessageFailed::class, 'messageId');
     }
 
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(GXRabbitMessageDelivery::class, 'messageId');
+    }
+
 
     /** --- SCOPES --- */
 
@@ -46,12 +51,20 @@ class GXRabbitMessage extends BaseModel
     {
         return $query->where(function ($query) use ($request) {
 
-            if ($request->exchange) {
+            if ($request->connectionId != '') {
+                $query->where('connectionId', $request->connectionId);
+            }
+
+            if ($request->exchange != '') {
                 $query->where('exchange', $request->exchange);
             }
 
-            if ($request->queue) {
+            if ($request->queue != '') {
                 $query->where('queue', $request->queue);
+            }
+
+            if ($request->finished != '') {
+                $query->where('finished', $request->finished);
             }
 
         });
