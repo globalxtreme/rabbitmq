@@ -10,7 +10,7 @@ interface GXRabbitMQConsumerContract
      *
      * @param array|string $data
      *
-     * @return void
+     * @return array|null
      */
     public static function consume(array|string $data);
 }
