@@ -20,12 +20,12 @@ class GXRabbitMQManager
     /**
      * @var AMQPStreamConnection|null
      */
-    protected AMQPStreamConnection|null $AMQPStreamConnection;
+    protected AMQPStreamConnection|null $AMQPStreamConnection = null;
 
     /**
      * @var GXRabbitConnection|null
      */
-    protected GXRabbitConnection|null $GXRabbitConnection;
+    protected GXRabbitConnection|null $GXRabbitConnection = null;
 
     /**
      * @var string

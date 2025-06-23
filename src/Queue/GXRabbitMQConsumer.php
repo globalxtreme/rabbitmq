@@ -133,7 +133,7 @@ class GXRabbitMQConsumer
             if ($serviceName = config('base.conf.service')) {
                 $messageQuery->with([
                     'deliveries' => function ($query) use ($serviceName) {
-                        $query->where('service', $serviceName);
+                        $query->where('consumerService', $serviceName);
                     }
                 ]);
             }
@@ -144,9 +144,9 @@ class GXRabbitMQConsumer
                 return;
             }
 
-            $consumer::consume($data);
+            $response = $consumer::consume($data);
 
-            $this->successConsuming($consumer, $queueMessage);
+            $this->successConsuming($consumer, $queueMessage, $response);
 
         } catch (\Throwable $throwable) {
             if (!$queueMessage) {
