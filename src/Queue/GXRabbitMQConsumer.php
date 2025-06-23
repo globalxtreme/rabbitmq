@@ -153,23 +153,23 @@ class GXRabbitMQConsumer
                 $queueMessage = $messageId;
             }
 
-            $this->failedConsuming($consumer, $exchange, $queue, $queueMessage, $data, $throwable->getMessage());
+            $this->failedConsuming($consumer, $exchange, $queue, $queueMessage, $data, $throwable);
             Log::error($throwable);
         }
     }
 
-    private function failedConsuming($consumer, $exchange, $queue, $message, $data, \Throwable|string $exception)
+    private function failedConsuming($consumer, $exchange, $queue, $message, $data, \Throwable|string $throwable)
     {
         Log::error("RABBITMQ-FAILED: $consumer " . now()->format('Y-m-d H:i:s'));
 
         if ($message) {
-            if ($exception instanceof \Throwable) {
+            if ($throwable instanceof \Throwable) {
                 $exceptionAttribute = [
-                    'message' => $exception->getMessage(),
-                    'trace' => $exception->getTraceAsString(),
+                    'message' => $throwable->getMessage(),
+                    'trace' => $throwable->getTraceAsString(),
                 ];
             } else {
-                $exceptionAttribute = ['message' => $exception, 'trace' => ''];
+                $exceptionAttribute = ['message' => $throwable, 'trace' => ''];
             }
 
             if ($message instanceof GXRabbitMessage) {
