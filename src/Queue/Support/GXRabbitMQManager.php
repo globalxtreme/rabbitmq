@@ -6,6 +6,7 @@ use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -56,6 +57,11 @@ class GXRabbitMQManager
      * @var array
      */
     protected $payload = [], $deliveries = [];
+
+    /**
+     * @var string|null
+     */
+    protected $senderId = null, $senderType = null;
 
     /**
      * @var bool
@@ -131,13 +137,36 @@ class GXRabbitMQManager
     }
 
     /**
-     * @param array $deliveries
+     * @param string $service
+     * @param bool $needNotification
      *
      * @return GXRabbitMQManager
      */
-    public function onDeliveries(array $deliveries): GXRabbitMQManager
+    public function onDelivery(string $service, bool $needNotification = false): GXRabbitMQManager
     {
-        $this->deliveries = $deliveries;
+        $this->deliveries[] = [
+            'service' => $service,
+            'needNotification' => $needNotification,
+        ];
+
+        return $this;
+    }
+
+    /**
+     * @param Model|int|string $sender
+     * @param string|null $senderType
+     *
+     * @return GXRabbitMQManager
+     */
+    public function onSender($sender, $senderType = null): GXRabbitMQManager
+    {
+        if ($sender instanceof Model) {
+            $this->senderId = $sender->id;
+            $this->senderType = get_class($sender);
+        } elseif (is_int($sender) || is_string($sender)) {
+            $this->senderId = $sender;
+            $this->senderType = $senderType;
+        }
 
         return $this;
     }
@@ -278,13 +307,21 @@ class GXRabbitMQManager
 
             $this->payload['messageId'] = $this->queueMessage->id;
         } else {
+            $senderId = $this->senderId ?: (isset($this->message['id']) ? $this->message['id'] : null);
+            $senderType = $this->senderType ?: (isset($this->message['class']) ? $this->message['class'] : null);
+
+            $withDelivery = count($this->deliveries) > 0;
+            if ($withDelivery && (!$senderId || !$senderType)) {
+                $this->logError("Please set your sender id and type first!");
+            }
+
             $this->queueMessage = GXRabbitMessage::create([
                 'connectionId' => $this->GXRabbitConnection->id,
                 'exchange' => $this->exchange,
                 'queue' => $this->queue,
                 'finished' => (!$this->queue && $this->exchange),
-                'senderId' => isset($this->message['id']) ? $this->message['id'] : null,
-                'senderType' => isset($this->message['class']) ? $this->message['class'] : null,
+                'senderId' => $senderId,
+                'senderType' => $senderType,
                 'senderService' => config('base.conf.service'),
                 'payload' => $this->payload
             ]);
@@ -294,11 +331,14 @@ class GXRabbitMQManager
                 $this->queueMessage->payload = $this->payload;
                 $this->queueMessage->save();
 
-                if (count($this->deliveries) > 0) {
+                if ($withDelivery) {
                     foreach ($this->deliveries as $delivery) {
                         $this->queueMessage->deliveries()->updateOrCreate(
-                            ['consumerService' => $delivery],
-                            ['statusId' => GXRabbitMessageDeliveryStatus::PENDING_ID]
+                            ['consumerService' => $delivery['service']],
+                            [
+                                'statusId' => GXRabbitMessageDeliveryStatus::PENDING_ID,
+                                'needNotification' => $delivery['needNotification'],
+                            ]
                         );
                     }
                 }

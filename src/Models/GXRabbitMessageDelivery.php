@@ -15,11 +15,13 @@ class GXRabbitMessageDelivery extends BaseModel
         'consumerService',
         'statusId',
         'responses',
+        'needNotification',
     ];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
     protected $casts = [
         'responses' => 'array',
+        'needNotification' => 'boolean',
     ];
 
 
@@ -38,7 +40,7 @@ class GXRabbitMessageDelivery extends BaseModel
         return $query->where(function ($query) use ($request) {
 
             if ($request->service != "") {
-                $query->where('service', $request->service);
+                $query->where('consumerService', $request->service);
             }
 
             if ($request->statusId != "") {

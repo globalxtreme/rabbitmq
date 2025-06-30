@@ -19,7 +19,8 @@ class Example
         foreach ($exchanges as $exchange) {
             GXRabbitMQPublish::dispatch(['message' => "hallow Exchange? $exchange"])
                 ->onExchange($exchange)
-                ->onDeliveries(['customers', 'inventories']);
+                ->onDelivery('customers')
+                ->onDelivery('inventories', true);
         }
     }
 
@@ -37,7 +38,7 @@ class Example
             'business.notification.employee.push.queue-' => TestingTwoConsumer::class,
         ]);
 
-        $consumer->consume();
+        $consumer->rabbitmqConsume();
     }
 
 }
