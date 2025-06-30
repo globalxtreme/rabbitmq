@@ -40,7 +40,7 @@ class GXRabbitMessageDelivery extends BaseModel
         return $query->where(function ($query) use ($request) {
 
             if ($request->service != "") {
-                $query->where('service', $request->service);
+                $query->where('consumerService', $request->service);
             }
 
             if ($request->statusId != "") {
