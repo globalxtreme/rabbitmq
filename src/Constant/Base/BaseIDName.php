@@ -18,7 +18,7 @@ class BaseIDName
      *
      * @return array
      */
-    public static function get(array|null $options = null): array
+    public static function get($options = null)
     {
         if ($options) {
             return collect($options)->map(function ($option) {
@@ -39,7 +39,7 @@ class BaseIDName
      *
      * @return string
      */
-    public static function display(int|null $id = null): string
+    public static function display($id = null)
     {
         if (isset(static::OPTION[$id])) {
             return static::OPTION[$id];
@@ -53,7 +53,7 @@ class BaseIDName
      *
      * @return array|null
      */
-    public static function idName(int|null $id = null): array|null
+    public static function idName($id = null)
     {
         if (!$id) {
             return null;

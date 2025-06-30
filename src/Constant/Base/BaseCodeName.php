@@ -18,7 +18,7 @@ class BaseCodeName
      *
      * @return array
      */
-    public static function get(array|null $options = null): array
+    public static function get($options = null)
     {
         if ($options) {
             return collect($options)->map(function ($option) {
@@ -39,7 +39,7 @@ class BaseCodeName
      *
      * @return string
      */
-    public static function display(string $value): string
+    public static function display(string $value)
     {
         $value = str_replace("_", " ", $value);
         $value = Str::title($value);
@@ -61,7 +61,7 @@ class BaseCodeName
      *
      * @return array|null
      */
-    public static function codeName(string|null $code = null): array|null
+    public static function codeName($code = null)
     {
         if (!$code) {
             return null;
@@ -75,7 +75,7 @@ class BaseCodeName
      *
      * @return string
      */
-    public static function toCamelCase(string $value): string
+    public static function toCamelCase(string $value)
     {
         return Str::camel($value);
     }
