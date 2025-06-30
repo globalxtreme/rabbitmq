@@ -3,8 +3,10 @@
 namespace GlobalXtreme\RabbitMQ\Queue;
 
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageDelivery;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessageFailed;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
@@ -56,7 +58,7 @@ class GXRabbitMQConsumer
 
     /** --- ACTION --- */
 
-    public function consume(string $connectionType = GXRabbitConnectionType::GLOBAL)
+    public function rabbitmqConsume(string $connectionType = GXRabbitConnectionType::GLOBAL)
     {
         $configuration = config("gx-rabbitmq.connection.types.$connectionType");
 
@@ -111,6 +113,64 @@ class GXRabbitMQConsumer
         }
     }
 
+    public function prepareManualConsume($messageId, $senderId)
+    {
+        if (!$messageId || !$senderId) {
+            return null;
+        }
+
+        $serviceName = config('base.conf.service');
+
+        $message = GXRabbitMessage::select('messages.*')
+            ->leftJoin('message_deliveries', 'messages.id', '=', 'message_deliveries.messageId')
+            ->where('messages.id', $messageId)
+            ->where('messages.senderId', $senderId)
+            ->where('message_deliveries.consumerService', $serviceName)
+            ->with([
+                'connection',
+                'deliveries' => function ($query) use ($serviceName) {
+                    $query->where('consumerService', $serviceName);
+                }
+            ])
+            ->first();
+        if (!$message) {
+            errRabbitMQMessageGet();
+        }
+
+        $delivery = $message->deliveries->first();
+        if (!$delivery) {
+            errRabbitMQMessageDeliveryGet();
+        }
+
+        if ($delivery->statusId != GXRabbitMessageDeliveryStatus::ERROR_ID) {
+            errRabbitMQMessageDeliveryValidation("Status message delivery is not error!");
+        }
+
+        return $message;
+    }
+
+    public function successConsuming($queueMessage, $response = null)
+    {
+        if (!$queueMessage->finished) {
+            $queueMessage->finished = true;
+            $queueMessage->save();
+        }
+
+        if ($messageDelivery = $queueMessage->deliveries->first()) {
+            if ($response && (is_array($response) && count($response) > 0)) {
+                $responses = $messageDelivery->responses;
+                $responses[] = $response;
+
+                $messageDelivery->responses = $responses;
+            }
+
+            $messageDelivery->statusId = GXRabbitMessageDeliveryStatus::FINISH_ID;
+            $messageDelivery->save();
+
+            $this->sendNotification($queueMessage, $messageDelivery, $response);
+        }
+    }
+
 
     /** --- FUNCTIONS --- */
 
@@ -118,6 +178,7 @@ class GXRabbitMQConsumer
     {
         Log::info("RABBITMQ-CONSUMING: $consumer " . now()->format('Y-m-d H:i:s'));
 
+        $queueMessage = null;
         $messageId = null;
         $data = null;
 
@@ -127,34 +188,69 @@ class GXRabbitMQConsumer
             $messageId = $body['messageId'];
             $data = $body['data'];
 
-            $queueMessage = GXRabbitMessage::find($body['messageId']);
+            $messageQuery = GXRabbitMessage::query();
+            if ($serviceName = config('base.conf.service')) {
+                $messageQuery->with([
+                    'deliveries' => function ($query) use ($serviceName) {
+                        $query->where('consumerService', $serviceName);
+                    }
+                ]);
+            }
+
+            $queueMessage = $messageQuery->find($body['messageId']);
             if (!$queueMessage) {
                 $this->failedConsuming($consumer, $exchange, $queue, $messageId, $data, "Message Not found [{$body['messageId']}]");
                 return;
             }
 
-            $consumer::consume($data);
+            $response = $consumer::consume($data);
 
-            $this->successConsuming($consumer, $queueMessage);
+            $this->successConsuming($queueMessage, $response);
 
-        } catch (\Exception $exception) {
-            $this->failedConsuming($consumer, $exchange, $queue, $messageId, $data, $exception->getMessage());
-            Log::error($exception);
+            Log::info("RABBITMQ-SUCCESS: $consumer " . now()->format('Y-m-d H:i:s'));
+
+        } catch (\Throwable $throwable) {
+            if (!$queueMessage) {
+                $queueMessage = $messageId;
+            }
+
+            $this->failedConsuming($consumer, $exchange, $queue, $queueMessage, $data, $throwable);
+            Log::error($throwable);
         }
     }
 
-    private function failedConsuming($consumer, $exchange, $queue, $messageId, $data, \Exception|string $exception)
+    private function failedConsuming($consumer, $exchange, $queue, $message, $data, \Throwable|string $throwable)
     {
         Log::error("RABBITMQ-FAILED: $consumer " . now()->format('Y-m-d H:i:s'));
 
-        if ($messageId) {
-            if ($exception instanceof \Exception) {
+        if ($message) {
+            if ($throwable instanceof \Throwable) {
                 $exceptionAttribute = [
-                    'message' => $exception->getMessage(),
-                    'trace' => $exception->getTraceAsString(),
+                    'message' => $throwable->getMessage(),
+                    'trace' => $throwable->getTraceAsString(),
                 ];
             } else {
-                $exceptionAttribute = ['message' => $exception, 'trace' => ''];
+                $exceptionAttribute = ['message' => $throwable, 'trace' => ''];
+            }
+
+            if ($message instanceof GXRabbitMessage) {
+                $messageId = $message->id;
+
+                if ($messageDelivery = $message->deliveries->first()) {
+                    if (count($exceptionAttribute) > 0) {
+                        $responses = $messageDelivery->responses;
+                        $responses[] = $exceptionAttribute;
+
+                        $messageDelivery->responses = $responses;
+                    }
+
+                    $messageDelivery->statusId = GXRabbitMessageDeliveryStatus::ERROR_ID;
+                    $messageDelivery->save();
+
+                    $this->sendNotification($message, $messageDelivery, $exceptionAttribute);
+                }
+            } else {
+                $messageId = $message;
             }
 
             GXRabbitMessageFailed::create([
@@ -169,12 +265,50 @@ class GXRabbitMQConsumer
         }
     }
 
-    private function successConsuming($consumer, $queueMessage)
+    private function sendNotification(GXRabbitMessage $message, $messageDelivery, mixed $result)
     {
-        $queueMessage->finished = true;
-        $queueMessage->save();
+        if (!$messageDelivery->needNotification) {
+            return;
+        }
 
-        Log::info("RABBITMQ-SUCCESS: $consumer " . now()->format('Y-m-d H:i:s'));
+        if ($message->resend > 0 && $messageDelivery->statusId == GXRabbitMessageDeliveryStatus::ERROR_ID) {
+            return;
+        }
+
+        $setExchangeQueueKey = function ($key): string {
+            $keys = explode('.', $key);
+            $lastKey = array_key_last($keys);
+
+            $keys[$lastKey] = "processed";
+            $keys[$lastKey + 1] = "queue";
+
+            return implode('.', $keys);
+        };
+
+        $queue = "";
+        if ($message->exchange) {
+            $queue = $setExchangeQueueKey($message->exchange);
+        } elseif ($message->queue) {
+            $queue = $setExchangeQueueKey($message->queue);
+        }
+
+        if ($queue) {
+            $response = [
+                'status' => GXRabbitMessageDeliveryStatus::idName($messageDelivery->statusId),
+                'error' => null,
+                'result' => null,
+            ];
+
+            if ($messageDelivery->statusId == GXRabbitMessageDeliveryStatus::FINISH_ID) {
+                $response['result'] = $result;
+            } else {
+                $response['error'] = $result;
+            }
+
+            GXRabbitMQPublish::dispatch($response)
+                ->onQueue($queue)
+                ->onSender($message->senderId, $message->senderType);
+        }
     }
 
 }

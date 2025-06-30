@@ -6,7 +6,7 @@ GlobalXtreme RabbitMQ
 ### Standar Penulisan exchange & queue:
 Exhange: <-service->-<-domain / feature->-<-sub feature->-<-action->-exchange\
 Queue: <-service->-<-domain / feature->-<-sub feature->-<-action->-queue\
-Example: [Publish & Consume](https://github.com/globalxtreme/rabbitmq/tree/v2.1/src/example/Example.php)
+Example: [Publish & Consume](https://github.com/globalxtreme/rabbitmq/tree/v2.1/example/Example.php)
 
 
 ## Configuration:
@@ -88,7 +88,7 @@ RABBITMQ_LOCAL_PASSWORD=root
 ### 4. Consumer generator
 ```shell
 # Command ini untuk generate consumer class
-php artisan make:message-broker WorkOrder\\WorkOrderCreateConsumer
+php artisan make:rabbitmq-consumer WorkOrder\\WorkOrderCreateConsumer
 ```
 
 ### 5. Cara penggunaan
@@ -170,6 +170,6 @@ $consumer->setQueues([
 ]);
 
 // Value default adalah "global", namun bisa dirubah dengat tipe koneksi lain "local"
-$consumer->consume(); // local / global
+$consumer->rabbitmqConsume(); // local / global
 
 ```

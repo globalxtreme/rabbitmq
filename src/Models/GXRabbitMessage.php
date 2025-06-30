@@ -3,6 +3,7 @@
 namespace GlobalXtreme\RabbitMQ\Models;
 
 use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -15,10 +16,16 @@ class GXRabbitMessage extends BaseModel
     protected $casts = [
         'payload' => 'array',
         'finished' => 'boolean',
+        'resend' => 'float',
     ];
 
 
     /** --- RELATIONSHIPS --- */
+
+    public function connection(): BelongsTo
+    {
+        return $this->belongsTo(GXRabbitConnection::class, 'connectionId');
+    }
 
     public function sender(): MorphTo
     {
@@ -30,6 +37,11 @@ class GXRabbitMessage extends BaseModel
         return $this->hasMany(GXRabbitMessageFailed::class, 'messageId');
     }
 
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(GXRabbitMessageDelivery::class, 'messageId');
+    }
+
 
     /** --- SCOPES --- */
 
@@ -37,12 +49,20 @@ class GXRabbitMessage extends BaseModel
     {
         return $query->where(function ($query) use ($request) {
 
-            if ($request->exchange) {
+            if ($request->connectionId != '') {
+                $query->where('connectionId', $request->connectionId);
+            }
+
+            if ($request->exchange != '') {
                 $query->where('exchange', $request->exchange);
             }
 
-            if ($request->queue) {
+            if ($request->queue != '') {
                 $query->where('queue', $request->queue);
+            }
+
+            if ($request->finished != '') {
+                $query->where('finished', $request->finished);
             }
 
         });

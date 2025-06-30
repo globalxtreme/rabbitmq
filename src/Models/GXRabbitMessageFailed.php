@@ -14,6 +14,7 @@ class GXRabbitMessageFailed extends BaseModel
     protected $casts = [
         'payload' => 'array',
         'exception' => 'array',
+        'resend' => 'boolean',
     ];
 
 

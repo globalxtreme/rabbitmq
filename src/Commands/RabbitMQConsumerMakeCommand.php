@@ -5,15 +5,15 @@ namespace GlobalXtreme\RabbitMQ\Commands;
 use Illuminate\Console\GeneratorCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 
-#[AsCommand(name: 'make:message-broker')]
-class MessageBrokerMakeCommand extends GeneratorCommand
+#[AsCommand(name: 'make:rabbitmq-consumer')]
+class RabbitMQConsumerMakeCommand extends GeneratorCommand
 {
     /**
      * The console command name.
      *
      * @var string
      */
-    protected $name = 'make:message-broker';
+    protected $name = 'make:rabbitmq-consumer';
 
     /**
      * The name of the console command.
@@ -24,7 +24,7 @@ class MessageBrokerMakeCommand extends GeneratorCommand
      *
      * @deprecated
      */
-    protected static $defaultName = 'make:message-broker';
+    protected static $defaultName = 'make:rabbitmq-consumer';
 
     /**
      * The console command description.

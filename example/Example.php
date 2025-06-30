@@ -18,7 +18,9 @@ class Example
         $exchanges = ['business.product.variant.justification.approval.exchange', 'business.product.variant.update.exchange'];
         foreach ($exchanges as $exchange) {
             GXRabbitMQPublish::dispatch(['message' => "hallow Exchange? $exchange"])
-                ->onExchange($exchange);
+                ->onExchange($exchange)
+                ->onDelivery('customers')
+                ->onDelivery('inventories', true);
         }
     }
 
@@ -36,27 +38,45 @@ class Example
             'business.notification.employee.push.queue-' => TestingTwoConsumer::class,
         ]);
 
-        $consumer->consume();
+        $consumer->rabbitmqConsume();
     }
 
 }
 
 class TestingOneConsumer implements GXRabbitMQConsumerContract
 {
+    /**
+     * @param array|string $data
+     *
+     * @return array|null
+     */
     public static function consume(array|string $data)
     {
         Log::info("Testing One");
         Log::info($data);
         Log::info("=========");
+
+        return [
+            'name' => 'John Doe',
+        ];
     }
 }
 
 class TestingTwoConsumer implements GXRabbitMQConsumerContract
 {
+    /**
+     * @param array|string $data
+     *
+     * @return array|null
+     */
     public static function consume(array|string $data)
     {
         Log::info("Testing two");
         Log::info($data);
         Log::info("=========");
+
+        return [
+            'success' => true
+        ];
     }
 }
