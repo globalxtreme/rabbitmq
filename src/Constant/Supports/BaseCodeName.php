@@ -1,6 +1,6 @@
 <?php
 
-namespace GlobalXtreme\RabbitMQ\Constant\Supports;
+namespace GlobalXtreme\RabbitMQ\Constant\Base;
 
 use Illuminate\Support\Str;
 
@@ -68,6 +68,16 @@ class BaseCodeName
         }
 
         return ['code' => $code, 'name' => static::display($code)];
+    }
+
+    /**
+     * @param string $value
+     *
+     * @return string
+     */
+    public static function toCamelCase(string $value): string
+    {
+        return Str::camel($value);
     }
 
 }

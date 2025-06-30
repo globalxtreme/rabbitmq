@@ -2,40 +2,41 @@
 
 namespace GlobalXtreme\RabbitMQ\Queue\Support;
 
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
-use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
-use Ramsey\Uuid\Uuid;
 
 class GXRabbitMQManager
 {
     /**
      * @var string
      */
-    protected string $connection = 'rabbitmq';
+    protected string $connectionType = GXRabbitConnectionType::GLOBAL;
+
+    /**
+     * @var AMQPStreamConnection|null
+     */
+    protected AMQPStreamConnection|null $AMQPStreamConnection = null;
+
+    /**
+     * @var GXRabbitConnection|null
+     */
+    protected GXRabbitConnection|null $GXRabbitConnection = null;
 
     /**
      * @var string
      */
-    protected string $host = 'default';
+    protected string $exchange = "";
 
     /**
      * @var string
      */
-    protected string $exchange = 'direct';
-
-    /**
-     * @var array
-     */
-    protected array $queues = [];
-
-    /**
-     * @var string
-     */
-    protected string $key = '';
+    protected string $queue = "";
 
     /**
      * @var float
@@ -45,65 +46,62 @@ class GXRabbitMQManager
     /**
      * @var array
      */
-    protected array $rabbitmqConf = [];
+    protected array $payload = [], $deliveries = [];
 
     /**
-     * @var AMQPStreamConnection
+     * @var string|null
      */
-    protected $AMQPStreamConnection;
+    protected string|null $senderId = null, $senderType = null;
 
     /**
-     * @var AMQPChannel
+     * @var bool
      */
-    protected $AMQPChannel;
-
-    /**
-     * @var array
-     */
-    protected array $msgBody = [];
-
-    /**
-     * @var array
-     */
-    protected array $msgProperty = [];
+    private bool $isError = false;
 
 
     /**
      * @param string|array $message
-     * @param int|null $queueMessageId
+     * @param GXRabbitMessage|int|null $queueMessage
      */
-    public function __construct(protected string|array $message, protected int|null $queueMessageId = null)
+    public function __construct(protected string|array $message, protected GXRabbitMessage|int|null $queueMessage = null)
     {
     }
 
 
     /**
-     * @param string $connection
+     * @param GXRabbitConnection|string $GXRabbitConnection
      *
-     * @return GXRabbitMQManager
+     * @return \GlobalXtreme\RabbitMQ\Queue\Support\GXRabbitMQManager
      */
-    public function onConnection(string $connection): GXRabbitMQManager
+    public function onConnection(GXRabbitConnection|string $GXRabbitConnection): GXRabbitMQManager
     {
-        $this->connection = $connection;
+        if ($GXRabbitConnection instanceof GXRabbitConnection) {
+            $this->connectionType = $GXRabbitConnection->connection;
+            $this->GXRabbitConnection = $GXRabbitConnection;
 
-        return $this;
-    }
+            $this->setAMQPStreamConnection(
+                $GXRabbitConnection->IP,
+                $GXRabbitConnection->port,
+                $GXRabbitConnection->username,
+                $GXRabbitConnection->password,
+            );
+        } else {
+            $this->connectionType = $GXRabbitConnection;
 
-    /**
-     * @param string $host
-     *
-     * @return GXRabbitMQManager
-     */
-    public function onHost(string $host): GXRabbitMQManager
-    {
-        $this->host = $host;
+            $this->setGXRabbitConnection();
+            $this->setAMQPStreamConnection(
+                $this->GXRabbitConnection->IP,
+                $this->GXRabbitConnection->port,
+                $this->GXRabbitConnection->username,
+                $this->GXRabbitConnection->password,
+            );
+        }
 
         return $this;
     }
 
     /**
      * @param string $exchange
-     * @param bool $ignoreExchangeName
      *
      * @return GXRabbitMQManager
      */
@@ -121,31 +119,42 @@ class GXRabbitMQManager
      */
     public function onQueue(string $queue): GXRabbitMQManager
     {
-        $this->queues[] = $queue;
+        $this->queue = $queue;
 
         return $this;
     }
 
     /**
-     * @param ...$queues
+     * @param string $service
+     * @param bool $needNotification
      *
      * @return GXRabbitMQManager
      */
-    public function onMultiQueues(...$queues): GXRabbitMQManager
+    public function onDelivery(string $service, bool $needNotification = false): GXRabbitMQManager
     {
-        $this->queues = array_merge($this->queues, $queues);
+        $this->deliveries[] = [
+            'service' => $service,
+            'needNotification' => $needNotification,
+        ];
 
         return $this;
     }
 
     /**
-     * @param string $key
+     * @param Model|int|string $sender
+     * @param string|null $senderType
      *
      * @return GXRabbitMQManager
      */
-    public function onKey(string $key): GXRabbitMQManager
+    public function onSender(Model|int|string $sender, string|null $senderType = null): GXRabbitMQManager
     {
-        $this->key = $key;
+        if ($sender instanceof Model) {
+            $this->senderId = $sender->id;
+            $this->senderType = $sender::class;
+        } elseif (is_int($sender) || is_string($sender)) {
+            $this->senderId = $sender;
+            $this->senderType = $senderType;
+        }
 
         return $this;
     }
@@ -174,53 +183,53 @@ class GXRabbitMQManager
     {
         try {
 
-            if (!$this->connection) {
+            if ($this->isError) {
+                return;
+            }
+
+            if (!$this->connectionType) {
                 $this->logError("Please set your connection first!");
-                return;
             }
 
-            $this->rabbitmqConf = config("queue.connections.$this->connection");
-            if (!$this->rabbitmqConf) {
-                $this->logError("Your connection invalid!");
-                return;
+            if (!$this->exchange && !$this->queue) {
+                $this->logError("Please set your exchange or queue first!");
             }
 
-            if (!isset($this->rabbitmqConf['hosts'][$this->host]) || !$this->rabbitmqConf['hosts'][$this->host]) {
-                $this->logError("Host [$this->host] not found. Please set your host in your configuration!");
-                return;
+            if (!$this->GXRabbitConnection) {
+                $this->setGXRabbitConnection();
             }
 
-            if (!$this->exchange) {
-                $this->logError("Please set your exchange first!");
-                return;
+            $this->saveQueueMessage();
+
+            if (!$this->AMQPStreamConnection) {
+                $configuration = config("gx-rabbitmq.connection.types.$this->connectionType");
+                if (!$configuration) {
+                    $this->logError("Your connection type does not exists!");
+                }
+
+                $this->setAMQPStreamConnection(
+                    $configuration['host'],
+                    $configuration['port'],
+                    $configuration['user'],
+                    $configuration['password'],
+                    $configuration['vhost']
+                );
             }
 
-            // if (count($this->queues) == 0) {
-            //     $this->logError("Please set your queue(s) first!");
-            //     return;
-            // }
+            $channel = $this->AMQPStreamConnection->channel();
 
-            if (!isset($this->rabbitmqConf['exchanges'][$this->exchange])) {
-                $this->logError("Exchange [$this->exchange] not found. Please set your exchange in your configuration!");
-                return;
+            $msg = new AMQPMessage(json_encode($this->payload));
+
+            if ($this->exchange != "") {
+                $channel->exchange_declare($this->exchange, 'fanout', false, true, false);
+                $channel->basic_publish($msg, $this->exchange);
+            } elseif ($this->queue != "") {
+                $channel->queue_declare($this->queue, false, true, false, false);
+                $channel->basic_publish($msg, '', $this->queue);
             }
 
-            if (!$this->key) {
-                $this->logError("Please set message key!");
-                return;
-            }
-
-            $exchange = $this->rabbitmqConf['exchanges'][$this->exchange];
-
-            $this->saveQueueMessage($exchange);
-
-            $this->setAMQPChannel();
-
-            $this->declareExchange($exchange);
-
-            $this->publishMessage($exchange);
-
-            $this->closeConnection();
+            $channel->close();
+            $this->AMQPStreamConnection->close();
 
         } catch (\Exception $exception) {
             Log::error($exception);
@@ -231,112 +240,108 @@ class GXRabbitMQManager
 
     /** --- SUB FUNCTIONS --- */
 
-    private function saveQueueMessage(array $exchange)
+    private function setGXRabbitConnection()
     {
-        $this->msgBody = [
-            'key' => $this->key,
-            'exchange' => $exchange['name'],
-            'queue' => $this->rabbitmqConf['queue'],
-            'message' => $this->message,
-            'messageId' => $this->queueMessageId
-        ];
-
-        $queueMessage = null;
-        if ($this->queueMessageId) {
-            $queueMessage = GXRabbitMessage::find($this->queueMessageId);
-
-            $this->msgBody['queue'] = $queueMessage?->queueSender;
+        $this->GXRabbitConnection = GXRabbitConnection::where('connection', $this->connectionType)
+            ->where(function ($query) {
+                if ($this->connectionType != GXRabbitConnectionType::GLOBAL) {
+                    $query->where('service', config('base.conf.service'));
+                }
+            })
+            ->first();
+        if (!$this->GXRabbitConnection) {
+            $this->logError("Your rabbitmq connection does not exists!");
         }
+    }
 
-        $this->msgProperty = [
-            'correlation_id' => Uuid::uuid4()->toString(),
-            'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-            'content_type' => 'application/json'
+    private function setAMQPStreamConnection($host,
+                                             $port,
+                                             $user,
+                                             $password,
+                                             $vhost = '/')
+    {
+        try {
+            $this->AMQPStreamConnection = new AMQPStreamConnection(
+                $host,
+                $port,
+                $user,
+                $password,
+                $vhost,
+                connection_timeout: ($this->connectionTimeout ?: (config('gx-rabbitmq.timeout') ?: 60))
+            );
+        } catch (\Exception $exception) {
+            $this->logError($exception->getMessage());
+        }
+    }
+
+    private function saveQueueMessage()
+    {
+        $this->payload = [
+            'data' => $this->message,
+            'messageId' => null
         ];
 
-        if (!$queueMessage) {
-            $queueStatuses = [];
-            foreach ($this->queues as $queue) {
-                $queueStatuses[$queue] = false;
+        if ($this->queueMessage) {
+            if (is_int($this->queueMessage)) {
+                $this->queueMessage = GXRabbitMessage::find($this->queueMessage);
+                if (!$this->queueMessage) {
+                    $this->logError("Your message doesn't exists!");
+                }
             }
 
-            $payload = ['body' => $this->msgBody, 'properties' => $this->msgProperty];
+            $this->payload['messageId'] = $this->queueMessage->id;
+        } else {
+            $senderId = $this->senderId ?: (isset($this->message['id']) ? $this->message['id'] : null);
+            $senderType = $this->senderType ?: (isset($this->message['class']) ? $this->message['class'] : null);
 
-            $queueMessage = GXRabbitMessage::create([
-                'exchange' => $exchange['name'],
-                'queueSender' => $this->rabbitmqConf['queue'],
-                'queueConsumers' => $this->queues,
-                'key' => $this->key,
-                'senderId' => isset($this->message['id']) ? $this->message['id'] : null,
-                'senderType' => isset($this->message['class']) ? $this->message['class'] : null,
-                'statuses' => $queueStatuses,
-                'payload' => $payload
+            $withDelivery = count($this->deliveries) > 0;
+            if ($withDelivery && (!$senderId || !$senderType)) {
+                $this->logError("Please set your sender id and type first!");
+            }
+
+            $this->queueMessage = GXRabbitMessage::create([
+                'connectionId' => $this->GXRabbitConnection->id,
+                'exchange' => $this->exchange,
+                'queue' => $this->queue,
+                'finished' => (!$this->queue && $this->exchange),
+                'senderId' => $senderId,
+                'senderType' => $senderType,
+                'senderService' => config('base.conf.service'),
+                'payload' => $this->payload
             ]);
-            if ($queueMessage) {
-                $payload['body']['messageId'] = $queueMessage->id;
-                $this->msgBody['messageId'] = $queueMessage->id;
+            if ($this->queueMessage) {
+                $this->payload['messageId'] = $this->queueMessage->id;
 
-                $queueMessage->payload = $payload;
-                $queueMessage->save();
+                $this->queueMessage->payload = $this->payload;
+                $this->queueMessage->save();
+
+                if ($withDelivery) {
+                    foreach ($this->deliveries as $delivery) {
+                        $this->queueMessage->deliveries()->updateOrCreate(
+                            ['consumerService' => $delivery['service']],
+                            [
+                                'statusId' => GXRabbitMessageDeliveryStatus::PENDING_ID,
+                                'needNotification' => $delivery['needNotification'],
+                            ]
+                        );
+                    }
+                }
             }
         }
-
-        return $queueMessage;
-    }
-
-    private function setAMQPChannel()
-    {
-        $host = $this->rabbitmqConf['hosts'][$this->host];
-        $this->AMQPStreamConnection = new AMQPStreamConnection(
-            $host['host'],
-            $host['port'],
-            $host['user'],
-            $host['password'],
-            $host['vhost'],
-            connection_timeout: $this->connectionTimeout
-        );
-
-        $this->AMQPChannel = $this->AMQPStreamConnection->channel();
-    }
-
-    private function declareExchange(array $exchange)
-    {
-        $this->AMQPChannel->exchange_declare(
-            $exchange['name'],
-            $exchange['type'],
-            $exchange['passive'],
-            $exchange['durable'],
-            $exchange['auto_delete']
-        );
-    }
-
-    private function publishMessage(array $exchange)
-    {
-        $msg = new AMQPMessage(json_encode($this->msgBody), $this->msgProperty);
-
-        if (count($this->queues) == 0) {
-            $this->AMQPChannel->basic_publish($msg, $exchange['name']);
-        }else{
-            foreach ($this->queues as $queue) {
-                $this->AMQPChannel->basic_publish($msg, $exchange['name'], $queue);
-            }
-        }
-    }
-
-    private function closeConnection()
-    {
-        $this->AMQPStreamConnection->close();
-        $this->AMQPChannel->close();
     }
 
     /**
      * @param string $message
      *
-     * @return void
+     * @return mixed
+     * @throws \Exception
      */
     private function logError(string $message)
     {
-        Log::error("GX-RABBIT-QUEUE: $message");
+        Log::error("RABBIT-PUBLISH: $message");
+        $this->isError = true;
+
+        throw new \Exception($message);
     }
 
 }
