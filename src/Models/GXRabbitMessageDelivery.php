@@ -15,11 +15,13 @@ class GXRabbitMessageDelivery extends BaseModel
         'consumerService',
         'statusId',
         'responses',
+        'needNotification',
     ];
 
     protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
     protected $casts = [
         'responses' => 'array',
+        'needNotification' => 'boolean',
     ];
 
 

@@ -3,6 +3,7 @@
 namespace GlobalXtreme\RabbitMQ\Models;
 
 use GlobalXtreme\RabbitMQ\Models\Support\BaseModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -20,6 +21,11 @@ class GXRabbitMessage extends BaseModel
 
 
     /** --- RELATIONSHIPS --- */
+
+    public function connection(): BelongsTo
+    {
+        return $this->belongsTo(GXRabbitConnection::class, 'connectionId');
+    }
 
     public function sender(): MorphTo
     {

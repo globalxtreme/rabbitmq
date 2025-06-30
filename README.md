@@ -170,6 +170,6 @@ $consumer->setQueues([
 ]);
 
 // Value default adalah "global", namun bisa dirubah dengat tipe koneksi lain "local"
-$consumer->consume(); // local / global
+$consumer->rabbitmqConsume(); // local / global
 
 ```
