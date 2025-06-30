@@ -141,17 +141,17 @@ class GXRabbitMQManager
     }
 
     /**
-     * @param Model|int $sender
+     * @param Model|int|string $sender
      * @param string|null $senderType
      *
      * @return GXRabbitMQManager
      */
-    public function onSender(Model|int $sender, string|null $senderType = null): GXRabbitMQManager
+    public function onSender(Model|int|string $sender, string|null $senderType = null): GXRabbitMQManager
     {
         if ($sender instanceof Model) {
             $this->senderId = $sender->id;
             $this->senderType = $sender::class;
-        } elseif (is_int($sender)) {
+        } elseif (is_int($sender) || is_string($sender)) {
             $this->senderId = $sender;
             $this->senderType = $senderType;
         }
@@ -291,13 +291,21 @@ class GXRabbitMQManager
 
             $this->payload['messageId'] = $this->queueMessage->id;
         } else {
+            $senderId = $this->senderId ?: (isset($this->message['id']) ? $this->message['id'] : null);
+            $senderType = $this->senderType ?: (isset($this->message['class']) ? $this->message['class'] : null);
+
+            $withDelivery = count($this->deliveries) > 0;
+            if ($withDelivery && (!$senderId || !$senderType)) {
+                $this->logError("Please set your sender id and type first!");
+            }
+
             $this->queueMessage = GXRabbitMessage::create([
                 'connectionId' => $this->GXRabbitConnection->id,
                 'exchange' => $this->exchange,
                 'queue' => $this->queue,
                 'finished' => (!$this->queue && $this->exchange),
-                'senderId' => $this->senderId ?: (isset($this->message['id']) ? $this->message['id'] : null),
-                'senderType' => $this->senderType ?: (isset($this->message['class']) ? $this->message['class'] : null),
+                'senderId' => $senderId,
+                'senderType' => $senderType,
                 'senderService' => config('base.conf.service'),
                 'payload' => $this->payload
             ]);
@@ -307,7 +315,7 @@ class GXRabbitMQManager
                 $this->queueMessage->payload = $this->payload;
                 $this->queueMessage->save();
 
-                if (count($this->deliveries) > 0) {
+                if ($withDelivery) {
                     foreach ($this->deliveries as $delivery) {
                         $this->queueMessage->deliveries()->updateOrCreate(
                             ['consumerService' => $delivery['service']],

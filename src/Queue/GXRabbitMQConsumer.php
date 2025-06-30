@@ -122,7 +122,7 @@ class GXRabbitMQConsumer
         $serviceName = config('base.conf.service');
 
         $message = GXRabbitMessage::select('messages.*')
-            ->leftJoin('message_deliveries', '=', 'messages.id', 'message_deliveries.messageId')
+            ->leftJoin('message_deliveries', 'messages.id', '=', 'message_deliveries.messageId')
             ->where('messages.id', $messageId)
             ->where('messages.senderId', $senderId)
             ->where('message_deliveries.consumerService', $serviceName)
@@ -306,7 +306,8 @@ class GXRabbitMQConsumer
             }
 
             GXRabbitMQPublish::dispatch($response)
-                ->onQueue($queue);
+                ->onQueue($queue)
+                ->onSender($message->senderId, $message->senderType);
         }
     }
 
