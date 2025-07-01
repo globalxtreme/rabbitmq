@@ -1,5 +1,6 @@
 <?php
 
+use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXRabbitMQConsumerContract;
 use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQConsumer;
 use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQPublish;
@@ -46,11 +47,12 @@ class Example
 class TestingOneConsumer implements GXRabbitMQConsumerContract
 {
     /**
+     * @param GXRabbitMessage $message
      * @param array|string $data
      *
      * @return array|null
      */
-    public static function consume(array|string $data)
+    public static function consume(GXRabbitMessage $message, array|string $data)
     {
         Log::info("Testing One");
         Log::info($data);
@@ -65,11 +67,12 @@ class TestingOneConsumer implements GXRabbitMQConsumerContract
 class TestingTwoConsumer implements GXRabbitMQConsumerContract
 {
     /**
+     * @param GXRabbitMessage $message
      * @param array|string $data
      *
      * @return array|null
      */
-    public static function consume(array|string $data)
+    public static function consume(GXRabbitMessage $message, array|string $data)
     {
         Log::info("Testing two");
         Log::info($data);
