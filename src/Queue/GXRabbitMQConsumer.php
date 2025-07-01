@@ -208,7 +208,7 @@ class GXRabbitMQConsumer
                 return;
             }
 
-            $response = $consumer::consume($data);
+            $response = $consumer::consume($queueMessage, $data);
 
             $this->successConsuming($queueMessage, $response);
 
