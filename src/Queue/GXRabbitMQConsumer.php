@@ -134,16 +134,16 @@ class GXRabbitMQConsumer
             ])
             ->first();
         if (!$message) {
-            errRabbitMQMessageGet();
+            $this->logError("Message not found");
         }
 
         $delivery = $message->deliveries->first();
         if (!$delivery) {
-            errRabbitMQMessageDeliveryGet();
+            $this->logError("Message delivery not found");
         }
 
         if ($delivery->statusId != GXRabbitMessageDeliveryStatus::ERROR_ID) {
-            errRabbitMQMessageDeliveryValidation("Status message delivery is not error!");
+            $this->logError("Status message delivery is not error!");
         }
 
         return $message;
@@ -309,6 +309,19 @@ class GXRabbitMQConsumer
                 ->onQueue($queue)
                 ->onSender($message->senderId, $message->senderType);
         }
+    }
+
+    /**
+     * @param string $message
+     *
+     * @return mixed
+     * @throws \Exception
+     */
+    private function logError(string $message)
+    {
+        Log::error("RABBIT-CONSUMER: $message");
+
+        throw new \Exception($message);
     }
 
 }
