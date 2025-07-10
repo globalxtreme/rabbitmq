@@ -9,23 +9,27 @@ class {{ class }} implements GXAsyncWorkflowConsumerContract
 {
     /**
      * @param GXRabbitAsyncWorkflowStep $workflowStep
-     * @param array $data
-     *
+     * @param array $payload
+     */
+    public function __construct(protected GXRabbitAsyncWorkflowStep $workflowStep, protected array $payload)
+    {
+    }
+
+
+    /**
      * @return array|null
      */
-    public static function consume(GXRabbitAsyncWorkflowStep $workflowStep, array $data)
+    public function consume()
     {
         // TODO: Enter your logic. Please don't use try catch
     }
 
     /**
-     * @param GXRabbitAsyncWorkflowStep $workflowStep
-     * @param array $data
-     * @param ...$processedData
+     * @param $data
      *
      * @return array|null
      */
-    public static function response(GXRabbitAsyncWorkflowStep $workflowStep, array $data, ...$processedData)
+    public function response($data = null)
     {
         // TODO: Enter your logic. Please don't use try catch
     }

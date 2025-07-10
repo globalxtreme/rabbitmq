@@ -9,6 +9,7 @@ use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
+use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowForwardPayload;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 
@@ -104,6 +105,10 @@ class GXAsyncWorkflowConsumer
                 return;
             }
 
+            $this->startProcessing($workflow, $workflowStep);
+
+            $consumerClass = new $consumer($workflowStep, $data);
+
             $nextWorkflowStep = null;
             if ($workflowStep->statusId == GXRabbitAsyncWorkflowStatus::FINISH_ID) {
                 $nextWorkflowStep = $workflow->steps()->where('stepOrder', '>', $workflowStep->stepOrder)
@@ -114,18 +119,36 @@ class GXAsyncWorkflowConsumer
                     return;
                 }
 
-                $response = $consumer::response($workflowStep, $data);
+                $response = $consumerClass->response();
             } else {
-                $response = $consumer::consume($workflowStep, $data);
+                $response = $consumerClass->consume();
             }
 
-            $this->successConsuming($workflow, $workflowStep, $nextWorkflowStep, $response);
+            $forwardPayload = [];
+            if ($consumerClass instanceof GXAsyncWorkflowForwardPayload) {
+                $forwardPayload = $consumerClass->forwardPayload();
+            }
+
+            $this->successConsuming($workflow, $workflowStep, $nextWorkflowStep, $response, $forwardPayload);
 
             Log::info("RABBITMQ-SUCCESS: $consumer " . now()->format('Y-m-d H:i:s'));
 
         } catch (\Throwable $throwable) {
             $this->failedConsuming($consumer, $workflow, $workflowStep, $throwable);
             Log::error($throwable);
+        }
+    }
+
+    private function startProcessing($workflow, $workflowStep)
+    {
+        if ($workflowStep->statusId != GXRabbitAsyncWorkflowStatus::PROCESSING_ID && $workflowStep->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+            $workflowStep->statusId = GXRabbitAsyncWorkflowStatus::PROCESSING_ID;
+            $workflowStep->save();
+        }
+
+        if ($workflow->statusId != GXRabbitAsyncWorkflowStatus::PROCESSING_ID && $workflow->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+            $workflow->statusId = GXRabbitAsyncWorkflowStatus::PROCESSING_ID;
+            $workflow->save();
         }
     }
 
@@ -167,8 +190,27 @@ class GXAsyncWorkflowConsumer
         $this->sendNotification($workflow, $workflowStep, $exceptionAttribute['message']);
     }
 
-    public function successConsuming($workflow, $workflowStep, $nextWorkflowStep, $response = null)
+    public function successConsuming($workflow, $workflowStep, $nextWorkflowStep, $response = null, $forwardPayloads = [])
     {
+        $forwardSteps = $workflow->steps()->where('stepOrder', '>', $workflowStep->stepOrder)
+            ->whereIn('queue', array_keys($forwardPayloads))
+            ->get();
+        foreach ($forwardSteps ?: [] as $forwardStep) {
+            $forwardPayload = $forwardStep->forwardPayload ?: [];
+
+            $originStepPayload = [];
+            if (!empty($forwardPayload[$workflowStep->queue])) {
+                $originStepPayload = $forwardPayload[$workflowStep->queue];
+            }
+
+            $this->remappingForwardPayload($forwardPayloads[$forwardStep->queue], $originStepPayload);
+
+            $forwardPayload[$workflowStep->queue] = $originStepPayload;
+
+            $forwardStep->forwardPayload = $forwardPayload;
+            $forwardStep->save();
+        }
+
         if (!$nextWorkflowStep) {
             $nextWorkflowStep = $workflow->steps()->where('stepOrder', '>', $workflowStep->stepOrder)
                 ->orderBy('stepOrder', 'ASC')
@@ -191,8 +233,17 @@ class GXAsyncWorkflowConsumer
             $nextWorkflowStep->save();
 
             if ($nextWorkflowStep->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
-                $publish = new GXAsyncWorkflowPublish();
-                $publish->pushWorkflowMessage($workflow->id, $workflowStep->id, $response);
+                $payload = $response ?: [];
+                if ($nextWorkflowStep->forwardPayload && count($nextWorkflowStep->forwardPayload ?: []) > 0) {
+                    foreach ($nextWorkflowStep->forwardPayload as $fKey => $forwardPayload) {
+                        $this->mergeForwardPayloadToPayload($forwardPayload, $payload);
+                    }
+                }
+
+                if (count($payload) > 0) {
+                    $publish = new GXAsyncWorkflowPublish();
+                    $publish->pushWorkflowMessage($workflow->id, $nextWorkflowStep->queue, $payload);
+                }
             }
         }
 
@@ -204,6 +255,42 @@ class GXAsyncWorkflowConsumer
     private function sendNotification($workflow, $workflowStep, $message)
     {
         // TODO: Kedepannya akan mengirim ke firebase
+    }
+
+    private function remappingForwardPayload($forwardPayload, &$originStepPayload)
+    {
+        if (!$forwardPayload) {
+            return;
+        }
+
+        foreach ($forwardPayload ?: [] as $fKey => $fPayload) {
+            if (is_array($fPayload)) {
+                $originStepPayload[$fKey] = [];
+                $this->remappingForwardPayload($fPayload, $originStepPayload[$fKey]);
+            } else {
+                $originStepPayload[$fKey] = $fPayload;
+            }
+        }
+    }
+
+    private function mergeForwardPayloadToPayload($forwardPayload, &$realPayload)
+    {
+        if (!$forwardPayload) {
+            return;
+        }
+
+        foreach ($forwardPayload ?: [] as $fKey => $fPayload) {
+            if (isset($realPayload[$fKey])) {
+                continue;
+            }
+
+            if (is_array($fPayload)) {
+                $realPayload[$fKey] = [];
+                $this->remappingForwardPayload($fPayload, $realPayload[$fKey]);
+            } else {
+                $realPayload[$fKey] = $fPayload;
+            }
+        }
     }
 
     /**

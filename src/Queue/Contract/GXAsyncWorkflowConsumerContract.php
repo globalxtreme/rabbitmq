@@ -2,25 +2,18 @@
 
 namespace GlobalXtreme\RabbitMQ\Queue\Contract;
 
-use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
-
 interface GXAsyncWorkflowConsumerContract
 {
     /**
-     * @param GXRabbitAsyncWorkflowStep $workflowStep
-     * @param array $data
-     *
      * @return array|null
      */
-    public static function consume(GXRabbitAsyncWorkflowStep $workflowStep, array $data);
+    public function consume();
 
     /**
-     * @param GXRabbitAsyncWorkflowStep $workflowStep
-     * @param array $data
-     * @param ...$processedData
+     * @param $data
      *
      * @return mixed
      */
-    public static function response(GXRabbitAsyncWorkflowStep $workflowStep, array $data, ...$processedData);
+    public function response($data = null);
 
 }

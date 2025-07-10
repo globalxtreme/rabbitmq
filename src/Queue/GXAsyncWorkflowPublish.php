@@ -102,13 +102,13 @@ class GXAsyncWorkflowPublish
     }
 
     /**
-     * @param Model|int|string $reference
+     * @param Model|int|string|null $reference
      * @param string|null $referenceType
      *
      * @return GXAsyncWorkflowPublish
      * @throws \Exception
      */
-    public function onReference(Model|int|string $reference, string|null $referenceType = null): GXAsyncWorkflowPublish
+    public function onReference(Model|int|string|null $reference, string|null $referenceType = null): GXAsyncWorkflowPublish
     {
         if ($reference instanceof Model) {
             $this->referenceId = $reference->id;

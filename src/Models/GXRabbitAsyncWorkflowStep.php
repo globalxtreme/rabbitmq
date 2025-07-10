@@ -13,6 +13,7 @@ class GXRabbitAsyncWorkflowStep extends BaseModel
     protected $casts = [
         'reprocessed' => 'integer',
         'payload' => 'array',
+        'forwardPayload' => 'array',
         'errors' => 'array',
         'response' => 'array',
     ];
