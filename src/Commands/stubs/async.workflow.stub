@@ -1,0 +1,33 @@
+<?php
+
+namespace {{ namespace }};
+
+use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
+use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowConsumerContract;
+
+class {{ class }} implements GXAsyncWorkflowConsumerContract
+{
+    /**
+     * @param GXRabbitAsyncWorkflowStep $workflowStep
+     * @param array $data
+     *
+     * @return array|null
+     */
+    public static function consume(GXRabbitAsyncWorkflowStep $workflowStep, array $data)
+    {
+        // TODO: Enter your logic. Please don't use try catch
+    }
+
+    /**
+     * @param GXRabbitAsyncWorkflowStep $workflowStep
+     * @param array $data
+     * @param ...$processedData
+     *
+     * @return array|null
+     */
+    public static function response(GXRabbitAsyncWorkflowStep $workflowStep, array $data, ...$processedData)
+    {
+        // TODO: Enter your logic. Please don't use try catch
+    }
+
+}
