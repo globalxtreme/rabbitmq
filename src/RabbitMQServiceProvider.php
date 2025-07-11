@@ -21,7 +21,8 @@ class RabbitMQServiceProvider extends ServiceProvider
     public function register()
     {
         $this->commands(
-            \GlobalXtreme\RabbitMQ\Commands\RabbitMQConsumerMakeCommand::class
+            \GlobalXtreme\RabbitMQ\Commands\RabbitMQConsumerMakeCommand::class,
+            \GlobalXtreme\RabbitMQ\Commands\AsyncWorkflowConsumerMakeCommand::class,
         );
     }
 }
