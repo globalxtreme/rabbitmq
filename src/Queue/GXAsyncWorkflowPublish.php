@@ -60,17 +60,15 @@ class GXAsyncWorkflowPublish
      * @param string|null $action
      * @param Model|int|string|null $reference
      * @param string|null $referenceType
-     * @param GXRabbitAsyncWorkflowStep|null $step
      * @param bool $isStrict
      *
      * @throws \Exception
      */
     public function __construct(
-        protected string|null                    $action = null,
-        protected Model|int|string|null          $reference = null,
-        protected string|null                    $referenceType = null,
-        protected GXRabbitAsyncWorkflowStep|null $step = null,
-        protected bool                           $isStrict = false,
+        protected string|null           $action = null,
+        protected Model|int|string|null $reference = null,
+        protected string|null           $referenceType = null,
+        protected bool                  $isStrict = false,
     )
     {
         $this->onReference($this->reference, $this->referenceType);
@@ -131,7 +129,7 @@ class GXAsyncWorkflowPublish
      *
      * @return GXAsyncWorkflowPublish
      */
-    public function onCreatedBy(string $createdBy, string $createdByName): GXAsyncWorkflowPublish
+    public function setCreatedBy(string $createdBy, string $createdByName): GXAsyncWorkflowPublish
     {
         $this->createdBy = $createdBy;
         $this->createdByName = $createdByName;
@@ -202,6 +200,7 @@ class GXAsyncWorkflowPublish
                 'action' => $this->action,
                 'referenceId' => $this->referenceId,
                 'referenceType' => $this->referenceType,
+                'statusId' => GXRabbitAsyncWorkflowStatus::PENDING_ID,
                 'referenceService' => $serviceName,
                 'totalStep' => $this->totalStep,
                 'createdBy' => $this->createdBy,

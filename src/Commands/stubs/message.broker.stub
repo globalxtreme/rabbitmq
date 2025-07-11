@@ -8,15 +8,18 @@ use GlobalXtreme\RabbitMQ\Queue\Contract\GXRabbitMQConsumerContract;
 class {{ class }} implements GXRabbitMQConsumerContract
 {
     /**
-     * The service for handle process of message
-     * Please don't use try catch. For handle failed process in BaseQueueJob
-     *
      * @param GXRabbitMessage $message
-     * @param array|string $data
-     *
+     * @param array $payload
+     */
+    public function __construct(protected GXRabbitMessage $message, protected array $payload)
+    {
+    }
+
+
+    /**
      * @return array|null
      */
-    public static function consume(GXRabbitMessage $message, array|string $data)
+    public function consume()
     {
         // TODO: Enter your logic. Please don't use try catch
     }
