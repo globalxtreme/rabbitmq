@@ -166,6 +166,15 @@ class GXAsyncWorkflowConsumer
                 $exceptionAttribute = ['message' => $throwable, 'trace' => ''];
             }
 
+            if ($workflow instanceof GXRabbitAsyncWorkflow) {
+                $errors = $workflow->errors ?: [];
+                $errors[] = $exceptionAttribute;
+
+                $workflow->errors = $errors;
+                $workflow->statusId = GXRabbitAsyncWorkflowStatus::ERROR_ID;
+                $workflow->save();
+            }
+
             if ($workflowStep) {
                 if ($workflowStep instanceof GXRabbitAsyncWorkflowStep) {
                     $errors = $workflowStep->errors ?: [];
@@ -174,15 +183,6 @@ class GXAsyncWorkflowConsumer
                     $workflowStep->errors = $errors;
                     $workflowStep->statusId = GXRabbitAsyncWorkflowStatus::ERROR_ID;
                     $workflowStep->save();
-                }
-            } else {
-                if ($workflow instanceof GXRabbitAsyncWorkflow) {
-                    $errors = $workflow->errors ?: [];
-                    $errors[] = $exceptionAttribute;
-
-                    $workflow->errors = $errors;
-                    $workflow->statusId = GXRabbitAsyncWorkflowStatus::ERROR_ID;
-                    $workflow->save();
                 }
             }
         }
@@ -291,20 +291,6 @@ class GXAsyncWorkflowConsumer
                 $realPayload[$fKey] = $fPayload;
             }
         }
-    }
-
-    /**
-     * @param string $message
-     *
-     * @return mixed
-     * @throws \Exception
-     */
-    private function logError(string $message)
-    {
-        Log::error("ASYNC-WORKFLOW-CONSUMER: $message");
-        $this->isError = true;
-
-        throw new \Exception($message);
     }
 
 }
