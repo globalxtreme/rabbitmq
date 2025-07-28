@@ -96,7 +96,7 @@ class GXAsyncWorkflowConsumer
                 return;
             }
 
-            if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+            if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
                 $this->failedConsuming($consumer, $workflow, null, "Your async workflow already finished [{$body['workflowId']}]");
                 return;
             }
@@ -112,11 +112,11 @@ class GXAsyncWorkflowConsumer
             $consumerClass = new $consumer($workflowStep, $data);
 
             $nextWorkflowStep = null;
-            if ($workflowStep->statusId == GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+            if ($workflowStep->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
                 $nextWorkflowStep = $workflow->steps()->where('stepOrder', '>', $workflowStep->stepOrder)
                     ->orderBy('stepOrder', 'ASC')
                     ->first();
-                if (!$nextWorkflowStep || $nextWorkflowStep->statusId == GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+                if (!$nextWorkflowStep || $nextWorkflowStep->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
                     $this->failedConsuming($consumer, $workflow, $workflowStep, "Your all async workflow step already finished [{$body['workflowId']}]");
                     return;
                 }
@@ -143,12 +143,12 @@ class GXAsyncWorkflowConsumer
 
     private function startProcessing($workflow, $workflowStep)
     {
-        if ($workflowStep->statusId != GXRabbitAsyncWorkflowStatus::PROCESSING_ID && $workflowStep->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+        if ($workflowStep->statusId != GXRabbitAsyncWorkflowStatus::PROCESSING_ID && $workflowStep->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
             $workflowStep->statusId = GXRabbitAsyncWorkflowStatus::PROCESSING_ID;
             $workflowStep->save();
         }
 
-        if ($workflow->statusId != GXRabbitAsyncWorkflowStatus::PROCESSING_ID && $workflow->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+        if ($workflow->statusId != GXRabbitAsyncWorkflowStatus::PROCESSING_ID && $workflow->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
             $workflow->statusId = GXRabbitAsyncWorkflowStatus::PROCESSING_ID;
             $workflow->save();
         }
@@ -219,14 +219,14 @@ class GXAsyncWorkflowConsumer
                 ->first();
         }
 
-        if (!$nextWorkflowStep && $workflow->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
-            $workflow->statusId = GXRabbitAsyncWorkflowStatus::FINISH_ID;
+        if (!$nextWorkflowStep && $workflow->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
+            $workflow->statusId = GXRabbitAsyncWorkflowStatus::SUCCESS_ID;
             $workflow->save();
         }
 
-        if ($workflowStep->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+        if ($workflowStep->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
             $workflowStep->response = $response;
-            $workflowStep->statusId = GXRabbitAsyncWorkflowStatus::FINISH_ID;
+            $workflowStep->statusId = GXRabbitAsyncWorkflowStatus::SUCCESS_ID;
             $workflowStep->save();
         }
 
@@ -234,7 +234,7 @@ class GXAsyncWorkflowConsumer
             $nextWorkflowStep->payload = $response;
             $nextWorkflowStep->save();
 
-            if ($nextWorkflowStep->statusId != GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+            if ($nextWorkflowStep->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
                 $payload = $response ?: [];
                 if ($nextWorkflowStep->forwardPayload && count($nextWorkflowStep->forwardPayload ?: []) > 0) {
                     foreach ($nextWorkflowStep->forwardPayload as $fKey => $forwardPayload) {
@@ -249,7 +249,7 @@ class GXAsyncWorkflowConsumer
             }
         }
 
-        if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::FINISH_ID) {
+        if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
             $this->sendNotification($workflow, $workflowStep, $workflow->successMessage);
         }
     }
@@ -288,7 +288,7 @@ class GXAsyncWorkflowConsumer
 
             if (is_array($fPayload)) {
                 $realPayload[$fKey] = [];
-                $this->remappingForwardPayload($fPayload, $realPayload[$fKey]);
+                $this->mergeForwardPayloadToPayload($fPayload, $realPayload[$fKey]);
             } else {
                 $realPayload[$fKey] = $fPayload;
             }

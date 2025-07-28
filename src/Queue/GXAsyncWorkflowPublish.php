@@ -63,7 +63,7 @@ class GXAsyncWorkflowPublish
     /**
      * @var array
      */
-    protected array $steps = [];
+    protected $steps = [];
 
     /**
      * @var GXRabbitConnection|null
@@ -205,7 +205,7 @@ class GXAsyncWorkflowPublish
                     ->where('referenceId', $this->referenceId)
                     ->where('referenceType', $this->referenceType)
                     ->where('referenceService', $serviceName)
-                    ->where('statusId', GXRabbitAsyncWorkflowStatus::FINISH_ID)
+                    ->where('statusId', GXRabbitAsyncWorkflowStatus::SUCCESS_ID)
                     ->count();
                 if ($totalWorkflow > 0) {
                     $this->logError("You have an asynchronous workflow not yet finished. Please check your workflow status and reprocess");
