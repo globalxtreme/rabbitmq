@@ -151,6 +151,8 @@ class GXAsyncWorkflowConsumer
             $workflow->statusId = GXRabbitAsyncWorkflowStatus::PROCESSING_ID;
             $workflow->save();
         }
+
+        $this->sendToMonitoringEvent($workflow, $workflowStep);
     }
 
     private function failedConsuming($consumer, $workflow, $workflowStep, \Throwable|string $throwable)

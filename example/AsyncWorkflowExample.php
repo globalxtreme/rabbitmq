@@ -2,14 +2,10 @@
 
 use GlobalXtreme\RabbitMQ\Form\GXAsyncWorkflowForm;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
-use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowConsumerContract;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowForwardPayload;
-use GlobalXtreme\RabbitMQ\Queue\Contract\GXRabbitMQConsumerContract;
 use GlobalXtreme\RabbitMQ\Queue\GXAsyncWorkflowConsumer;
 use GlobalXtreme\RabbitMQ\Queue\GXAsyncWorkflowPublish;
-use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQConsumer;
-use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQPublish;
 use Illuminate\Support\Facades\Log;
 
 class AsyncWorkflowExample
@@ -20,7 +16,7 @@ class AsyncWorkflowExample
         // STEP 0: Logic pada sales
 
         $workflow = new GXAsyncWorkflowPublish(
-            'prospect.service-location.convert',
+            'sales-management.prospect.service-location.convert',
             123, // ID prospect_service_locations
             'prospect_service_locations', // Table prospect_service_locations
             true // Untuk pengecekan apakah 1 reference hanya boleh memiliki 1 async workflow yang berstatus pending & processing
@@ -62,9 +58,9 @@ class AsyncWorkflowExample
         $consumer = new GXAsyncWorkflowConsumer();
 
         $consumer->setQueues([
-            'customer.service-location.convert.async-workflow' => StepOneConsumer::class,
-            'temporary.crm.service-location.save.async-workflow' => StepTwoConsumer::class,
-            'sales-management.prospect.service-location.update.async-workflow' => StepThreeConsumer::class,
+            'customer.service-location.convert.async-workflow' => StepOneExecutor::class,
+            'temporary.crm.service-location.save.async-workflow' => StepTwoExecutor::class,
+            'sales-management.prospect.service-location.update.async-workflow' => StepThreeExecutor::class,
         ]);
 
         $consumer->consume();
@@ -72,7 +68,7 @@ class AsyncWorkflowExample
 
 }
 
-class StepOneConsumer implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflowForwardPayload
+class StepOneExecutor implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflowForwardPayload
 {
     private $serviceLocation;
 
@@ -127,7 +123,7 @@ class StepOneConsumer implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflo
 
 }
 
-class StepTwoConsumer implements GXAsyncWorkflowConsumerContract
+class StepTwoExecutor implements GXAsyncWorkflowConsumerContract
 {
     /**
      * @param GXRabbitAsyncWorkflowStep $workflowStep
@@ -159,7 +155,7 @@ class StepTwoConsumer implements GXAsyncWorkflowConsumerContract
 
 }
 
-class StepThreeConsumer implements GXAsyncWorkflowConsumerContract
+class StepThreeExecutor implements GXAsyncWorkflowConsumerContract
 {
     /**
      * @param GXRabbitAsyncWorkflowStep $workflowStep
