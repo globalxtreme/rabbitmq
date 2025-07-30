@@ -62,13 +62,17 @@ class GXAsyncWorkflowConsumer
             });
         }
 
-        try {
-            $channel->consume();
-        } catch (\Throwable $exception) {
-            Log::error($exception);
-        } finally {
+        register_shutdown_function(function ($channel, $connection) {
             $channel->close();
             $connection->close();
+        }, $channel, $connection);
+
+        try {
+            while (count($channel->callbacks)) {
+                $channel->wait();
+            }
+        } catch (\Throwable $exception) {
+            Log::error($exception);
         }
     }
 
@@ -275,7 +279,7 @@ class GXAsyncWorkflowConsumer
             'totalStep' => $workflow->totalStep,
             'reprocessed' => $workflow->reprocessed,
             'createdBy' => $workflow->createdByName,
-            'createdAt' => $workflow->createdAt?->format('d/m/Y H:i:s'),
+            'createdAt' => optional($workflow->createdAt)->format('d/m/Y H:i:s'),
             'reference' => [
                 'id' => $workflow->referenceId,
                 'type' => $workflow->referenceType,
@@ -297,8 +301,8 @@ class GXAsyncWorkflowConsumer
                 'errors' => $workflowStep->errors,
                 'response' => $workflowStep->response,
                 'reprocessed' => $workflowStep->reprocessed,
-                'createdAt' => $workflowStep->createdAt?->format('d/m/Y H:i:s'),
-                'updatedAt' => $workflowStep->updatedAt?->format('d/m/Y H:i:s'),
+                'createdAt' => optional($workflow->createdAt)->format('d/m/Y H:i:s'),
+                'updatedAt' => optional($workflow->updatedAt)->format('d/m/Y H:i:s'),
             ];
         }
 
