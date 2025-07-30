@@ -61,6 +61,21 @@ return [
 
     ],
     
+    'redis' => [
+
+        'client' => env('REDIS_CLIENT', 'phpredis'),
+
+        'async-workflow' => [
+            'url' => env('REDIS_ASYNC_WORKFLOW_URL'),
+            'host' => env('REDIS_ASYNC_WORKFLOW_HOST', '127.0.0.1'),
+            'username' => env('REDIS_ASYNC_WORKFLOW_USERNAME'),
+            'password' => env('REDIS_ASYNC_WORKFLOW_PASSWORD'),
+            'port' => env('REDIS_ASYNC_WORKFLOW_PORT', '6379'),
+            'database' => env('REDIS_ASYNC_WORKFLOW_DB', '0'),
+        ],
+
+    ],
+
     // ... Konfigurasi lainnya
 
 ];
