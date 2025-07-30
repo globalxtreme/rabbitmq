@@ -16,7 +16,7 @@ class AsyncWorkflowExample
         // STEP 0: Logic pada sales
 
         $workflow = new GXAsyncWorkflowPublish(
-            'prospect.service-location.convert',
+            'sales-management.prospect.service-location.convert',
             123, // ID prospect_service_locations
             'prospect_service_locations', // Table prospect_service_locations
             true // Untuk pengecekan apakah 1 reference hanya boleh memiliki 1 async workflow yang berstatus pending & processing
@@ -58,9 +58,9 @@ class AsyncWorkflowExample
         $consumer = new GXAsyncWorkflowConsumer();
 
         $consumer->setQueues([
-            'customer.service-location.convert.async-workflow' => StepOneConsumer::class,
-            'temporary.crm.service-location.save.async-workflow' => StepTwoConsumer::class,
-            'sales-management.prospect.service-location.update.async-workflow' => StepThreeConsumer::class,
+            'customer.service-location.convert.async-workflow' => StepOneExecutor::class,
+            'temporary.crm.service-location.save.async-workflow' => StepTwoExecutor::class,
+            'sales-management.prospect.service-location.update.async-workflow' => StepThreeExecutor::class,
         ]);
 
         $consumer->consume();
@@ -68,7 +68,7 @@ class AsyncWorkflowExample
 
 }
 
-class StepOneConsumer implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflowForwardPayload
+class StepOneExecutor implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflowForwardPayload
 {
     protected $workflowStep;
     protected $payload;
@@ -128,7 +128,7 @@ class StepOneConsumer implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflo
 
 }
 
-class StepTwoConsumer implements GXAsyncWorkflowConsumerContract
+class StepTwoExecutor implements GXAsyncWorkflowConsumerContract
 {
     protected $workflowStep;
     protected $payload;
@@ -165,7 +165,7 @@ class StepTwoConsumer implements GXAsyncWorkflowConsumerContract
 
 }
 
-class StepThreeConsumer implements GXAsyncWorkflowConsumerContract
+class StepThreeExecutor implements GXAsyncWorkflowConsumerContract
 {
     protected $workflowStep;
     protected $payload;

@@ -4,10 +4,12 @@ namespace GlobalXtreme\RabbitMQ\Queue;
 
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitAsyncWorkflowStatus;
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
+use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowForwardPayload;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 
 class GXAsyncWorkflowConsumer
@@ -88,7 +90,7 @@ class GXAsyncWorkflowConsumer
             $serviceName = config('base.conf.service');
             $workflow = GXRabbitAsyncWorkflow::with([
                 'steps' => function ($query) use ($queue, $serviceName) {
-                    $query->where('service', $serviceName)->where('queue', $queue);
+                    $query->where('queue', $queue);
                 }
             ])->find($body['workflowId']);
             if (!$workflow) {
@@ -103,7 +105,7 @@ class GXAsyncWorkflowConsumer
 
             $workflowStep = $workflow->steps->where('queue', $queue)->first();
             if (!$workflowStep) {
-                $this->failedConsuming($consumer, $workflow, null, "Async workflow Not found [{$body['workflowId']}]");
+                $this->failedConsuming($consumer, $workflow, null, "Async workflow step Not found [{$body['workflowId']}]");
                 return;
             }
 
@@ -152,6 +154,8 @@ class GXAsyncWorkflowConsumer
             $workflow->statusId = GXRabbitAsyncWorkflowStatus::PROCESSING_ID;
             $workflow->save();
         }
+
+        $this->sendToMonitoringEvent($workflow, $workflowStep);
     }
 
     private function failedConsuming($consumer, $workflow, $workflowStep, $throwable)
@@ -187,12 +191,13 @@ class GXAsyncWorkflowConsumer
                     $workflowStep->save();
                 }
             }
-        }
 
-        $this->sendNotification($workflow, $workflowStep, $exceptionAttribute['message']);
+            $this->sendNotification($workflow, $workflowStep, $exceptionAttribute['message']);
+            $this->sendToMonitoringEvent($workflow, $workflowStep);
+        }
     }
 
-    public function successConsuming($workflow, $workflowStep, $nextWorkflowStep, $response = null, $forwardPayloads = [])
+    private function successConsuming($workflow, $workflowStep, $nextWorkflowStep, $response = null, $forwardPayloads = [])
     {
         $forwardSteps = $workflow->steps()->where('stepOrder', '>', $workflowStep->stepOrder)
             ->whereIn('queue', array_keys($forwardPayloads))
@@ -252,11 +257,61 @@ class GXAsyncWorkflowConsumer
         if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
             $this->sendNotification($workflow, $workflowStep, $workflow->successMessage);
         }
+
+        $this->sendToMonitoringEvent($workflow, $workflowStep);
     }
 
     private function sendNotification($workflow, $workflowStep, $message)
     {
-        // TODO: Kedepannya akan mengirim ke firebase
+        // Tunggu business
+    }
+
+    private function sendToMonitoringEvent($workflow, $workflowStep)
+    {
+        $result = [
+            'id' => $workflow->id,
+            'action' => $workflow->action,
+            'status' => GXRabbitAsyncWorkflowStatus::idName($workflow->statusId),
+            'totalStep' => $workflow->totalStep,
+            'reprocessed' => $workflow->reprocessed,
+            'createdBy' => $workflow->createdByName,
+            'createdAt' => $workflow->createdAt?->format('d/m/Y H:i:s'),
+            'reference' => [
+                'id' => $workflow->referenceId,
+                'type' => $workflow->referenceType,
+                'service' => $workflow->referenceService,
+            ],
+            'step' => null
+        ];
+
+        if ($workflowStep) {
+            $result['step'] = [
+                'id' => $workflowStep->id,
+                'service' => $workflowStep->service,
+                'queue' => $workflowStep->queue,
+                'stepOrder' => $workflowStep->stepOrder,
+                'status' => GXRabbitAsyncWorkflowStatus::idName($workflowStep->statusId),
+                'description' => $workflowStep->description,
+                'payload' => $workflowStep->payload,
+                'forwardPayload' => $workflowStep->forwardPayload,
+                'errors' => $workflowStep->errors,
+                'response' => $workflowStep->response,
+                'reprocessed' => $workflowStep->reprocessed,
+                'createdAt' => $workflowStep->createdAt?->format('d/m/Y H:i:s'),
+                'updatedAt' => $workflowStep->updatedAt?->format('d/m/Y H:i:s'),
+            ];
+        }
+
+        $channel = "ws-channel.async-workflow.monitoring";
+        $channel .= ":$workflow->action-$workflow->referenceId";
+
+        $client = Redis::connection('async-workflow')->client();
+        $client->connect(env('REDIS_ASYNC_WORKFLOW_HOST'), env('REDIS_ASYNC_WORKFLOW_PORT'));
+        $client->publish($channel, json_encode([
+            "event" => "monitoring",
+            "error" => "",
+            "result" => $result,
+        ]));
     }
 
     private function remappingForwardPayload($forwardPayload, &$originStepPayload)
@@ -267,7 +322,10 @@ class GXAsyncWorkflowConsumer
 
         foreach ($forwardPayload ?: [] as $fKey => $fPayload) {
             if (is_array($fPayload)) {
-                $originStepPayload[$fKey] = [];
+                if (!isset($realPayload[$fKey]) || !is_array($realPayload[$fKey])) {
+                    $realPayload[$fKey] = [];
+                }
+
                 $this->remappingForwardPayload($fPayload, $originStepPayload[$fKey]);
             } else {
                 $originStepPayload[$fKey] = $fPayload;
@@ -282,12 +340,11 @@ class GXAsyncWorkflowConsumer
         }
 
         foreach ($forwardPayload ?: [] as $fKey => $fPayload) {
-            if (isset($realPayload[$fKey])) {
-                continue;
-            }
-
             if (is_array($fPayload)) {
-                $realPayload[$fKey] = [];
+                if (!isset($realPayload[$fKey]) || !is_array($realPayload[$fKey])) {
+                    $realPayload[$fKey] = [];
+                }
+
                 $this->mergeForwardPayloadToPayload($fPayload, $realPayload[$fKey]);
             } else {
                 $realPayload[$fKey] = $fPayload;
