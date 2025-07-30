@@ -15,9 +15,9 @@
   },
   "require": {
     "php": "7.*",
-    "enqueue/amqp-bunny": "0.10.4|0.10.9",
+    "enqueue/amqp-bunny": "^0.10.4|^0.10.9",
     "illuminate/support": "^7.0|^8.0",
-    "vladimir-yuldashev/laravel-queue-rabbitmq": "10.0.*|11.1.*"
+    "vladimir-yuldashev/laravel-queue-rabbitmq": "^10.0|^10.2|^11.1"
   },
   "extra": {
     "laravel": {
