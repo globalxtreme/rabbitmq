@@ -15,13 +15,15 @@ class RabbitMQServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/Commands/RabbitMQGlobalCommand.php' => app_path('/Console/Commands/MessageBroker/RabbitMQGlobalCommand.php'),
             __DIR__.'/Commands/RabbitMQLocalCommand.php' => app_path('/Console/Commands/MessageBroker/RabbitMQLocalCommand.php'),
+            __DIR__.'/Commands/AsyncWorkflowCommand.php' => app_path('/Console/Commands/MessageBroker/AsyncWorkflowCommand.php'),
         ], 'gx-rabbitmq-command');
     }
 
     public function register()
     {
         $this->commands(
-            \GlobalXtreme\RabbitMQ\Commands\RabbitMQConsumerMakeCommand::class
+            \GlobalXtreme\RabbitMQ\Commands\RabbitMQConsumerMakeCommand::class,
+            \GlobalXtreme\RabbitMQ\Commands\AsyncWorkflowConsumerMakeCommand::class,
         );
     }
 }

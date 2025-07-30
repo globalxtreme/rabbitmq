@@ -1,11 +1,12 @@
 <?php
 
+use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXRabbitMQConsumerContract;
 use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQConsumer;
 use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQPublish;
 use Illuminate\Support\Facades\Log;
 
-class Example
+class RabbitMQExample
 {
     public function publish()
     {
@@ -46,14 +47,21 @@ class Example
 class TestingOneConsumer implements GXRabbitMQConsumerContract
 {
     /**
-     * @param array|string $data
-     *
+     * @param GXRabbitMessage $message
+     * @param array $payload
+     */
+    public function __construct(protected GXRabbitMessage $message, protected array $payload)
+    {
+    }
+
+
+    /**
      * @return array|null
      */
-    public static function consume(array|string $data)
+    public function consume()
     {
         Log::info("Testing One");
-        Log::info($data);
+        Log::info($this->payload);
         Log::info("=========");
 
         return [
@@ -65,14 +73,21 @@ class TestingOneConsumer implements GXRabbitMQConsumerContract
 class TestingTwoConsumer implements GXRabbitMQConsumerContract
 {
     /**
-     * @param array|string $data
-     *
+     * @param GXRabbitMessage $message
+     * @param array $payload
+     */
+    public function __construct(protected GXRabbitMessage $message, protected array $payload)
+    {
+    }
+
+
+    /**
      * @return array|null
      */
-    public static function consume(array|string $data)
+    public function consume()
     {
         Log::info("Testing two");
-        Log::info($data);
+        Log::info($this->payload);
         Log::info("=========");
 
         return [
