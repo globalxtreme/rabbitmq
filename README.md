@@ -160,10 +160,13 @@ class WorkOrderCreateConsumer implements GXRabbitMQConsumerContract
 class WorkOrderCreateExecutor implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflowForwardPayload
 {
     /**
+     * @param GXRabbitAsyncWorkflow $workflow
      * @param GXRabbitAsyncWorkflowStep $workflowStep
      * @param array $payload
      */
-    public function __construct(protected GXRabbitAsyncWorkflowStep $workflowStep, protected array $payload)
+    public function __construct(protected GXRabbitAsyncWorkflow     $workflow,
+                                protected GXRabbitAsyncWorkflowStep $workflowStep,
+                                protected array                     $payload)
     {
     }
 
