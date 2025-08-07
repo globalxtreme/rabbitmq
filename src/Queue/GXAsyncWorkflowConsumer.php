@@ -115,7 +115,7 @@ class GXAsyncWorkflowConsumer
 
             $this->startProcessing($workflow, $workflowStep);
 
-            $consumerClass = new $consumer($workflowStep, $data);
+            $consumerClass = new $consumer($workflow, $workflowStep, $data);
 
             $nextWorkflowStep = null;
             if ($workflowStep->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {

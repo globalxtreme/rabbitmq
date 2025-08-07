@@ -1,6 +1,7 @@
 <?php
 
 use GlobalXtreme\RabbitMQ\Form\GXAsyncWorkflowForm;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowConsumerContract;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowForwardPayload;
@@ -70,17 +71,20 @@ class AsyncWorkflowExample
 
 class StepOneExecutor implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflowForwardPayload
 {
+    protected $workflow;
     protected $workflowStep;
     protected $payload;
 
     private $serviceLocation;
 
     /**
+     * @param GXRabbitAsyncWorkflow $workflow
      * @param GXRabbitAsyncWorkflowStep $workflowStep
      * @param array $payload
      */
-    public function __construct(GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
+    public function __construct(GXRabbitAsyncWorkflow $workflow, GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
     {
+        $this->workflow = $workflow;
         $this->workflowStep = $workflowStep;
         $this->payload = $payload;
     }
@@ -130,15 +134,18 @@ class StepOneExecutor implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflo
 
 class StepTwoExecutor implements GXAsyncWorkflowConsumerContract
 {
+    protected $workflow;
     protected $workflowStep;
     protected $payload;
 
     /**
+     * @param GXRabbitAsyncWorkflow $workflow
      * @param GXRabbitAsyncWorkflowStep $workflowStep
      * @param array $payload
      */
-    public function __construct(GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
+    public function __construct(GXRabbitAsyncWorkflow $workflow, GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
     {
+        $this->workflow = $workflow;
         $this->workflowStep = $workflowStep;
         $this->payload = $payload;
     }
@@ -167,15 +174,18 @@ class StepTwoExecutor implements GXAsyncWorkflowConsumerContract
 
 class StepThreeExecutor implements GXAsyncWorkflowConsumerContract
 {
+    protected $workflow;
     protected $workflowStep;
     protected $payload;
 
     /**
+     * @param GXRabbitAsyncWorkflow $workflow
      * @param GXRabbitAsyncWorkflowStep $workflowStep
      * @param array $payload
      */
-    public function __construct(GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
+    public function __construct(GXRabbitAsyncWorkflow $workflow, GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
     {
+        $this->workflow = $workflow;
         $this->workflowStep = $workflowStep;
         $this->payload = $payload;
     }

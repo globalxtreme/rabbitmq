@@ -127,6 +127,7 @@ php artisan make:async-workflow WorkOrder\\WorkOrderCreateExecutor
 
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Form\GXAsyncWorkflowForm;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
@@ -138,12 +139,17 @@ use GlobalXtreme\RabbitMQ\Queue\GXRabbitMQPublish;
 
 class WorkOrderCreateConsumer implements GXRabbitMQConsumerContract
 {
+    protected $message;
+    protected $payload;
+
     /**
      * @param GXRabbitMessage $message
      * @param array $payload
      */
-    public function __construct(protected GXRabbitMessage $message, protected array $payload)
+    public function __construct(GXRabbitMessage $message, array $payload)
     {
+        $this->message = $message;
+        $this->payload = $payload;
     }
 
 
@@ -159,12 +165,20 @@ class WorkOrderCreateConsumer implements GXRabbitMQConsumerContract
 
 class WorkOrderCreateExecutor implements GXAsyncWorkflowConsumerContract, GXAsyncWorkflowForwardPayload
 {
+    protected $workflow;
+    protected $workflowStep;
+    protected $payload;
+
     /**
+     * @param GXRabbitAsyncWorkflow $workflow
      * @param GXRabbitAsyncWorkflowStep $workflowStep
      * @param array $payload
      */
-    public function __construct(protected GXRabbitAsyncWorkflowStep $workflowStep, protected array $payload)
+    public function __construct(GXRabbitAsyncWorkflow $workflow, GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
     {
+        $this->workflow = $workflow;
+        $this->workflowStep = $workflowStep;
+        $this->payload = $payload;
     }
 
 

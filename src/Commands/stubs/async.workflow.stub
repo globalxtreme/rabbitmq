@@ -2,20 +2,24 @@
 
 namespace {{ namespace }};
 
+use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowConsumerContract;
 
 class {{ class }} implements GXAsyncWorkflowConsumerContract
 {
+    protected $workflow;
     protected $workflowStep;
     protected $payload;
 
     /**
+     * @param GXRabbitAsyncWorkflow $workflow
      * @param GXRabbitAsyncWorkflowStep $workflowStep
      * @param array $payload
      */
-    public function __construct(GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
+    public function __construct(GXRabbitAsyncWorkflow $workflow, GXRabbitAsyncWorkflowStep $workflowStep, array $payload)
     {
+        $this->workflow = $workflow;
         $this->workflowStep = $workflowStep;
         $this->payload = $payload;
     }
