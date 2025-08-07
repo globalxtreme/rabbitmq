@@ -19,6 +19,14 @@ class GXRabbitAsyncWorkflowStep extends BaseModel
     ];
 
 
+    /** --- RELATIONSHIPS --- */
+
+    public function workflow()
+    {
+        return $this->belongsTo(GXRabbitAsyncWorkflow::class, 'workflowId');
+    }
+
+
     /** --- SCOPES --- */
 
     public function scopeFilter($query, $request)
