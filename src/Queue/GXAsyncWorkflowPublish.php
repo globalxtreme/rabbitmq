@@ -10,6 +10,7 @@ use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -239,6 +240,8 @@ class GXAsyncWorkflowPublish
                 ]);
             }
 
+            $this->sendToMonitoringEvent($workflow);
+
             $this->pushWorkflowMessage($workflow->id, $this->firstStep->queue, $this->firstStep->payload);
 
         } catch (\Throwable $throw) {
@@ -305,6 +308,25 @@ class GXAsyncWorkflowPublish
         } catch (\Throwable $throw) {
             $this->logError($throw->getMessage());
         }
+    }
+
+    private function sendToMonitoringEvent($workflow)
+    {
+        $result = [
+            'id' => $workflow->id,
+            'service' => $workflow->referenceService,
+            'createdBy' => $workflow->createdBy,
+        ];
+
+        $channel = "ws-channel.async-workflow.monitoring:asa.monitoring.list";
+
+        $client = Redis::connection('async-workflow')->client();
+        $client->connect(env('REDIS_ASYNC_WORKFLOW_HOST'), env('REDIS_ASYNC_WORKFLOW_PORT'));
+        $client->publish($channel, json_encode([
+            "event" => "monitoring",
+            "error" => "",
+            "result" => $result,
+        ]));
     }
 
     /**

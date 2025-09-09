@@ -159,7 +159,7 @@ class GXAsyncWorkflowConsumer
             $workflow->save();
         }
 
-        $this->sendToMonitoringEvent($workflow, $workflowStep);
+        $this->sendToMonitoringActionEvent($workflow, $workflowStep);
     }
 
     private function failedConsuming($consumer, $workflow, $workflowStep, $throwable)
@@ -196,8 +196,9 @@ class GXAsyncWorkflowConsumer
                 }
             }
 
+            $this->sendToMonitoringEvent($workflow);
             $this->sendNotification($workflow, $workflowStep, $exceptionAttribute['message']);
-            $this->sendToMonitoringEvent($workflow, $workflowStep);
+            $this->sendToMonitoringActionEvent($workflow, $workflowStep);
         }
     }
 
@@ -259,10 +260,11 @@ class GXAsyncWorkflowConsumer
         }
 
         if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
+            $this->sendToMonitoringEvent($workflow);
             $this->sendNotification($workflow, $workflowStep, $workflow->successMessage);
         }
 
-        $this->sendToMonitoringEvent($workflow, $workflowStep);
+        $this->sendToMonitoringActionEvent($workflow, $workflowStep);
     }
 
     private function sendNotification($workflow, $workflowStep, $message)
@@ -270,7 +272,26 @@ class GXAsyncWorkflowConsumer
         // Tunggu business
     }
 
-    private function sendToMonitoringEvent($workflow, $workflowStep)
+    private function sendToMonitoringEvent($workflow)
+    {
+        $result = [
+            'id' => $workflow->id,
+            'service' => $workflow->referenceService,
+            'createdBy' => $workflow->createdBy,
+        ];
+
+        $channel = "ws-channel.async-workflow.monitoring:asa.monitoring.list";
+
+        $client = Redis::connection('async-workflow')->client();
+        $client->connect(env('REDIS_ASYNC_WORKFLOW_HOST'), env('REDIS_ASYNC_WORKFLOW_PORT'));
+        $client->publish($channel, json_encode([
+            "event" => "monitoring",
+            "error" => "",
+            "result" => $result,
+        ]));
+    }
+
+    private function sendToMonitoringActionEvent($workflow, $workflowStep)
     {
         $result = [
             'id' => $workflow->id,
