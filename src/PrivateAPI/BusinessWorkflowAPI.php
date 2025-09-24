@@ -70,7 +70,7 @@ class BusinessWorkflowAPI
                 $body = json_decode($e->getResponse()->getBody());
                 if ($body?->status) {
                     $status = $body->status;
-                    $errorMessage = sprintf("%s. %s. %d", $status->message, $status->internalMsg, $statusCode);
+                    $errorMessage = sprintf("%s. %s. %d", $status->message, $status->internalMsg, $status->code);
                 }
             }
 
