@@ -10,6 +10,7 @@ use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -24,6 +25,11 @@ class GXAsyncWorkflowPublish
      * @var string|null
      */
     protected string|null $createdBy = null, $createdByName = null;
+
+    /**
+     * @var string|null
+     */
+    protected string|null $description = null, $successMessage = null, $errorMessage = null;
 
     /**
      * @var bool
@@ -138,6 +144,42 @@ class GXAsyncWorkflowPublish
     }
 
     /**
+     * @param string $description
+     *
+     * @return GXAsyncWorkflowPublish
+     */
+    public function setDescription(string $description): GXAsyncWorkflowPublish
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * @param string $message
+     *
+     * @return GXAsyncWorkflowPublish
+     */
+    public function setSuccessMessage(string $message): GXAsyncWorkflowPublish
+    {
+        $this->successMessage = $message;
+
+        return $this;
+    }
+
+    /**
+     * @param string $message
+     *
+     * @return GXAsyncWorkflowPublish
+     */
+    public function setErrorMessage(string $message): GXAsyncWorkflowPublish
+    {
+        $this->errorMessage = $message;
+
+        return $this;
+    }
+
+    /**
      * @return GXAsyncWorkflowPublish
      */
     public function isStrict(): GXAsyncWorkflowPublish
@@ -198,10 +240,13 @@ class GXAsyncWorkflowPublish
 
             $workflow = GXRabbitAsyncWorkflow::create([
                 'action' => $this->action,
+                'description' => $this->description,
                 'referenceId' => $this->referenceId,
                 'referenceType' => $this->referenceType,
                 'statusId' => GXRabbitAsyncWorkflowStatus::PENDING_ID,
                 'referenceService' => $serviceName,
+                'successMessage' => $this->successMessage,
+                'errorMessage' => $this->errorMessage,
                 'totalStep' => $this->totalStep,
                 'createdBy' => $this->createdBy,
                 'createdByName' => $this->createdByName,
@@ -220,6 +265,8 @@ class GXAsyncWorkflowPublish
                     'payload' => $step->payload ?: null,
                 ]);
             }
+
+            $this->sendToMonitoringEvent($workflow);
 
             $this->pushWorkflowMessage($workflow->id, $this->firstStep->queue, $this->firstStep->payload);
 
@@ -283,6 +330,25 @@ class GXAsyncWorkflowPublish
         } catch (\Throwable $throw) {
             $this->logError($throw->getMessage());
         }
+    }
+
+    private function sendToMonitoringEvent($workflow)
+    {
+        $result = [
+            'id' => $workflow->id,
+            'service' => $workflow->referenceService,
+            'createdBy' => $workflow->createdBy,
+        ];
+
+        $channel = "ws-channel.async-workflow.monitoring:asa.monitoring.list";
+
+        $client = Redis::connection('async-workflow')->client();
+        $client->connect(env('REDIS_ASYNC_WORKFLOW_HOST'), env('REDIS_ASYNC_WORKFLOW_PORT'));
+        $client->publish($channel, json_encode([
+            "event" => "monitoring",
+            "error" => "",
+            "result" => $result,
+        ]));
     }
 
     /**
