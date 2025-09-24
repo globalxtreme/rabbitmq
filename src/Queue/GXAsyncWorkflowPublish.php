@@ -22,6 +22,11 @@ class GXAsyncWorkflowPublish
     protected $action = null;
 
     /**
+     * @var string|null
+     */
+    protected $description = null, $successMessage = null, $errorMessage = null;
+
+    /**
      * @var Model|int|string|null
      */
     protected $reference = null;
@@ -157,6 +162,42 @@ class GXAsyncWorkflowPublish
     }
 
     /**
+     * @param string $description
+     *
+     * @return GXAsyncWorkflowPublish
+     */
+    public function setDescription(string $description): GXAsyncWorkflowPublish
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * @param string $message
+     *
+     * @return GXAsyncWorkflowPublish
+     */
+    public function setSuccessMessage(string $message): GXAsyncWorkflowPublish
+    {
+        $this->successMessage = $message;
+
+        return $this;
+    }
+
+    /**
+     * @param string $message
+     *
+     * @return GXAsyncWorkflowPublish
+     */
+    public function setErrorMessage(string $message): GXAsyncWorkflowPublish
+    {
+        $this->errorMessage = $message;
+
+        return $this;
+    }
+
+    /**
      * @return GXAsyncWorkflowPublish
      */
     public function isStrict(): GXAsyncWorkflowPublish
@@ -217,10 +258,13 @@ class GXAsyncWorkflowPublish
 
             $workflow = GXRabbitAsyncWorkflow::create([
                 'action' => $this->action,
+                'description' => $this->description,
                 'referenceId' => $this->referenceId,
                 'referenceType' => $this->referenceType,
                 'statusId' => GXRabbitAsyncWorkflowStatus::PENDING_ID,
                 'referenceService' => $serviceName,
+                'successMessage' => $this->successMessage,
+                'errorMessage' => $this->errorMessage,
                 'totalStep' => $this->totalStep,
                 'createdBy' => $this->createdBy,
                 'createdByName' => $this->createdByName,

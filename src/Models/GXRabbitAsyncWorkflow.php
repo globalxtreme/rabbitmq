@@ -13,6 +13,7 @@ class GXRabbitAsyncWorkflow extends BaseModel
 
     protected $fillable = [
         'action',
+        'description',
         'statusId',
         'referenceId',
         'referenceType',
@@ -20,6 +21,7 @@ class GXRabbitAsyncWorkflow extends BaseModel
         'totalStep',
         'reprocessed',
         'successMessage',
+        'errorMessage',
         'errors',
         'createdBy',
         'createdByName',

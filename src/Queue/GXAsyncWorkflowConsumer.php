@@ -7,6 +7,7 @@ use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
+use GlobalXtreme\RabbitMQ\PrivateAPI\BusinessWorkflowAPI;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowForwardPayload;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
@@ -98,18 +99,18 @@ class GXAsyncWorkflowConsumer
                 }
             ])->find($body['workflowId']);
             if (!$workflow) {
-                $this->failedConsuming($consumer, null, null, "Async workflow Not found [{$body['workflowId']}]");
+                $this->failedConsuming($consumer, null, null, "Get async workflow data is failed. [{$body['workflowId']}]");
                 return;
             }
 
             if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
-                $this->failedConsuming($consumer, $workflow, null, "Your async workflow already finished [{$body['workflowId']}]");
+                $this->failedConsuming($consumer, $workflow, null, "Your async workflow already finished. [{$body['workflowId']}]");
                 return;
             }
 
             $workflowStep = $workflow->steps->where('queue', $queue)->first();
             if (!$workflowStep) {
-                $this->failedConsuming($consumer, $workflow, null, "Async workflow step Not found [{$body['workflowId']}]");
+                $this->failedConsuming($consumer, $workflow, null, "Get async workflow step data ($queue) is failed. [{$body['workflowId']}]");
                 return;
             }
 
@@ -123,7 +124,7 @@ class GXAsyncWorkflowConsumer
                     ->orderBy('stepOrder', 'ASC')
                     ->first();
                 if (!$nextWorkflowStep || $nextWorkflowStep->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
-                    $this->failedConsuming($consumer, $workflow, $workflowStep, "Your all async workflow step already finished [{$body['workflowId']}]");
+                    $this->failedConsuming($consumer, $workflow, $workflowStep, "Your all async workflow step already finished. [{$body['workflowId']}]");
                     return;
                 }
 
@@ -167,13 +168,25 @@ class GXAsyncWorkflowConsumer
         Log::error("RABBITMQ-FAILED: $consumer " . now()->format('Y-m-d H:i:s'));
 
         if ($workflow) {
+            $errorMessage = $workflow->errorMessage;
+            if ($errorMessage == "") {
+                $errorMessage = sprintf("Process in action (%s) and step (%d) is failed", $workflow->action, optional($workflowStep)->stepOrder);
+            }
+
             if ($throwable instanceof \Throwable) {
+                $errorInternalMsg = $throwable->getMessage();
                 $exceptionAttribute = [
-                    'message' => $throwable->getMessage(),
+                    'message' => $errorMessage,
+                    'internalMsg' => $errorInternalMsg,
                     'trace' => $throwable->getTraceAsString(),
                 ];
             } else {
-                $exceptionAttribute = ['message' => $throwable, 'trace' => ''];
+                $errorInternalMsg = $throwable;
+                $exceptionAttribute = [
+                    'message' => $errorMessage,
+                    'internalMsg' => $throwable,
+                    'trace' => "",
+                ];
             }
 
             if ($workflow instanceof GXRabbitAsyncWorkflow) {
@@ -197,8 +210,11 @@ class GXAsyncWorkflowConsumer
             }
 
             $this->sendToMonitoringEvent($workflow);
-            $this->sendNotification($workflow, $workflowStep, $exceptionAttribute['message']);
             $this->sendToMonitoringActionEvent($workflow, $workflowStep);
+
+            if ($workflowStep) {
+                $this->pushToNotification($workflow, $workflowStep, $errorMessage, $errorInternalMsg);
+            }
         }
     }
 
@@ -261,15 +277,15 @@ class GXAsyncWorkflowConsumer
 
         if ($workflow->statusId == GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
             $this->sendToMonitoringEvent($workflow);
-            $this->sendNotification($workflow, $workflowStep, $workflow->successMessage);
+
+            $successMsg = $workflow->successMessage;
+            if ($successMsg == "") {
+                $successMsg = sprintf("Process in action (%s) has been successfully", $workflow->action);
+            }
+            $this->pushToNotification($workflow, $workflowStep, $successMsg, $successMsg);
         }
 
         $this->sendToMonitoringActionEvent($workflow, $workflowStep);
-    }
-
-    private function sendNotification($workflow, $workflowStep, $message)
-    {
-        // Tunggu business
     }
 
     private function sendToMonitoringEvent($workflow)
@@ -296,6 +312,7 @@ class GXAsyncWorkflowConsumer
         $result = [
             'id' => $workflow->id,
             'action' => $workflow->action,
+            'description' => $workflow->description,
             'status' => GXRabbitAsyncWorkflowStatus::idName($workflow->statusId),
             'totalStep' => $workflow->totalStep,
             'reprocessed' => $workflow->reprocessed,
@@ -337,6 +354,42 @@ class GXAsyncWorkflowConsumer
             "error" => "",
             "result" => $result,
         ]));
+    }
+
+    private function pushToNotification($workflow, $workflowStep, $title, $body)
+    {
+        BusinessWorkflowAPI::notificationPush([
+            "blueprintCode" => "async-workflow.admin",
+            "data" => [
+                "title" => $title,
+                "body" => $body,
+                "recipientId" => $workflow->createdBy,
+                "deepLink" => ""
+            ],
+        ]);
+
+        if ($workflowStep) {
+            if ($workflowStep->statusId == GXRabbitAsyncWorkflowStatus::ERROR_ID && $workflowStep->reprocessed >= 10) {
+                $message = sprintf("*ERROR ASA:* %d\n", $workflow->id);
+                $message .= sprintf("*Action:* %s\n", $workflow->action);
+                $message .= sprintf("*Reference:* %s:%s\n", $workflow->referenceType, $workflow->referenceId);
+                $message .= sprintf("*Service:* %s\n\n", $workflow->referenceService);
+
+                $message .= sprintf("*Step:* %d\n", $workflowStep->stepOrder);
+                $message .= sprintf("*Service:* %s\n", $workflowStep->service);
+                $message .= sprintf("*Executor:* %s\n\n", $workflowStep->queue);
+
+                $message .= sprintf("*Title:* %s\n", $title);
+                $message .= sprintf("*Body:* %s", $body);
+
+                BusinessWorkflowAPI::notificationPush([
+                    "blueprintCode" => "async-workflow.developer",
+                    "data" => [
+                        "message" => $message,
+                    ],
+                ]);
+            }
+        }
     }
 
     private function remappingForwardPayload($forwardPayload, &$originStepPayload)
