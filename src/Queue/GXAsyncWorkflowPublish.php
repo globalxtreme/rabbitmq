@@ -274,14 +274,25 @@ class GXAsyncWorkflowPublish
             }
 
             foreach ($this->steps as $step) {
-                $workflow->steps()->create([
+                $stepForm = [
                     'service' => $step->service,
                     'queue' => $step->queue,
                     'stepOrder' => $step->stepOrder,
                     'statusId' => GXRabbitAsyncWorkflowStatus::PENDING_ID,
                     'description' => $step->description,
                     'payload' => $step->payload ?: null,
-                ]);
+                ];
+
+                $payload = $step->payload ?: null;
+                if ($payload != null) {
+                    if ($step->stepOrder == 1) {
+                        $stepForm['payload'] = $payload;
+                    } else {
+                        $stepForm['forwardPayload'] = [$this->action => $payload];
+                    }
+                }
+
+                $workflow->steps()->create($stepForm);
             }
 
             $this->sendToMonitoringEvent($workflow);
