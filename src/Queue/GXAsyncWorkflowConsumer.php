@@ -161,11 +161,7 @@ class GXAsyncWorkflowConsumer
         Log::error("RABBITMQ-FAILED: $consumer " . now()->format('Y-m-d H:i:s'));
 
         if ($workflow) {
-            $errorMessage = $workflow->errorMessage;
-            if ($errorMessage == "") {
-                $errorMessage = sprintf("Process in action (%s) and step (%d) is failed", $workflow->action, $workflowStep?->stepOrder);
-            }
-
+            $errorMessage = sprintf("Process in action (%s) and step (%d) is failed", $workflow->action, $workflowStep?->stepOrder);
             if ($throwable instanceof \Throwable) {
                 $errorInternalMsg = $throwable->getMessage();
                 $exceptionAttribute = [
@@ -206,6 +202,10 @@ class GXAsyncWorkflowConsumer
             $this->sendToMonitoringActionEvent($workflow, $workflowStep);
 
             if ($workflowStep) {
+                if ($workflow->errorMessage != "") {
+                    $errorMessage = $workflow->errorMessage;
+                }
+
                 $this->pushToNotification($workflow, $workflowStep, $errorMessage, $errorInternalMsg);
             }
         }
