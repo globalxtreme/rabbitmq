@@ -161,11 +161,7 @@ class GXAsyncWorkflowConsumer
         Log::error("RABBITMQ-FAILED: $consumer " . now()->format('Y-m-d H:i:s'));
 
         if ($workflow) {
-            $errorMessage = $workflow->errorMessage;
-            if ($errorMessage == "") {
-                $errorMessage = sprintf("Process in action (%s) and step (%d) is failed", $workflow->action, $workflowStep?->stepOrder);
-            }
-
+            $errorMessage = sprintf("Process in action (%s) and step (%d) is failed", $workflow->action, $workflowStep?->stepOrder);
             if ($throwable instanceof \Throwable) {
                 $errorInternalMsg = $throwable->getMessage();
                 $exceptionAttribute = [
@@ -206,6 +202,10 @@ class GXAsyncWorkflowConsumer
             $this->sendToMonitoringActionEvent($workflow, $workflowStep);
 
             if ($workflowStep) {
+                if ($workflow->errorMessage != "") {
+                    $errorMessage = $workflow->errorMessage;
+                }
+
                 $this->pushToNotification($workflow, $workflowStep, $errorMessage, $errorInternalMsg);
             }
         }
@@ -253,18 +253,16 @@ class GXAsyncWorkflowConsumer
             $nextWorkflowStep->payload = $response;
             $nextWorkflowStep->save();
 
-            if ($nextWorkflowStep->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
-                $payload = $response ?: [];
-                if ($nextWorkflowStep->forwardPayload && count($nextWorkflowStep->forwardPayload ?: []) > 0) {
-                    foreach ($nextWorkflowStep->forwardPayload as $fKey => $forwardPayload) {
-                        $this->mergeForwardPayloadToPayload($forwardPayload, $payload);
-                    }
+            $payload = $response ?: [];
+            if ($nextWorkflowStep->forwardPayload && count($nextWorkflowStep->forwardPayload ?: []) > 0) {
+                foreach ($nextWorkflowStep->forwardPayload as $fKey => $forwardPayload) {
+                    $this->mergeForwardPayloadToPayload($forwardPayload, $payload);
                 }
+            }
 
-                if (count($payload) > 0) {
-                    $publish = new GXAsyncWorkflowPublish();
-                    $publish->pushWorkflowMessage($workflow->id, $nextWorkflowStep->queue, $payload);
-                }
+            if (count($payload) > 0) {
+                $publish = new GXAsyncWorkflowPublish();
+                $publish->pushWorkflowMessage($workflow->id, $nextWorkflowStep->queue, $payload);
             }
         }
 
@@ -353,6 +351,7 @@ class GXAsyncWorkflowConsumer
     {
         BusinessWorkflowAPI::notificationPush([
             "blueprintCode" => "async-workflow.admin",
+            "service" => $workflow->referenceService,
             "data" => [
                 "title" => $title,
                 "body" => $body,
@@ -376,6 +375,7 @@ class GXAsyncWorkflowConsumer
 
             BusinessWorkflowAPI::notificationPush([
                 "blueprintCode" => "async-workflow.developer",
+                "service" => $workflow->referenceService,
                 "data" => [
                     "message" => $message,
                 ],
