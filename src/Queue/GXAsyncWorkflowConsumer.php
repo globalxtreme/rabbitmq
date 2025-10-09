@@ -253,18 +253,16 @@ class GXAsyncWorkflowConsumer
             $nextWorkflowStep->payload = $response;
             $nextWorkflowStep->save();
 
-            if ($nextWorkflowStep->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
-                $payload = $response ?: [];
-                if ($nextWorkflowStep->forwardPayload && count($nextWorkflowStep->forwardPayload ?: []) > 0) {
-                    foreach ($nextWorkflowStep->forwardPayload as $fKey => $forwardPayload) {
-                        $this->mergeForwardPayloadToPayload($forwardPayload, $payload);
-                    }
+            $payload = $response ?: [];
+            if ($nextWorkflowStep->forwardPayload && count($nextWorkflowStep->forwardPayload ?: []) > 0) {
+                foreach ($nextWorkflowStep->forwardPayload as $fKey => $forwardPayload) {
+                    $this->mergeForwardPayloadToPayload($forwardPayload, $payload);
                 }
+            }
 
-                if (count($payload) > 0) {
-                    $publish = new GXAsyncWorkflowPublish();
-                    $publish->pushWorkflowMessage($workflow->id, $nextWorkflowStep->queue, $payload);
-                }
+            if (count($payload) > 0) {
+                $publish = new GXAsyncWorkflowPublish();
+                $publish->pushWorkflowMessage($workflow->id, $nextWorkflowStep->queue, $payload);
             }
         }
 
@@ -353,6 +351,7 @@ class GXAsyncWorkflowConsumer
     {
         BusinessWorkflowAPI::notificationPush([
             "blueprintCode" => "async-workflow.admin",
+            "service" => $workflow->referenceService,
             "data" => [
                 "title" => $title,
                 "body" => $body,
@@ -376,6 +375,7 @@ class GXAsyncWorkflowConsumer
 
             BusinessWorkflowAPI::notificationPush([
                 "blueprintCode" => "async-workflow.developer",
+                "service" => $workflow->referenceService,
                 "data" => [
                     "message" => $message,
                 ],
