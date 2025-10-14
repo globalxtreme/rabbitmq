@@ -230,6 +230,11 @@ class GXAsyncWorkflowConsumer
 
             $forwardStep->forwardPayload = $forwardPayload;
             $forwardStep->save();
+
+            if ($nextWorkflowStep && $forwardStep->queue == $nextWorkflowStep->queue) {
+                $nextWorkflowStep->forwardPayload = $forwardPayload;
+                $nextWorkflowStep->save();
+            }
         }
 
         if (!$nextWorkflowStep) {
