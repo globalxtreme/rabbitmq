@@ -361,16 +361,18 @@ class GXAsyncWorkflowConsumer
 
     private function pushToNotification($workflow, $workflowStep, $title, $body)
     {
-        BusinessWorkflowAPI::notificationPush([
-            "blueprintCode" => "async-workflow.admin",
-            "service" => $workflow->referenceService,
-            "data" => [
-                "title" => $title,
-                "body" => $body,
-                "recipientId" => $workflow->createdBy,
-                "deepLink" => ""
-            ],
-        ]);
+        if ($workflow->createdBy) {
+            BusinessWorkflowAPI::notificationPush([
+                "blueprintCode" => "async-workflow.admin",
+                "service" => $workflow->referenceService,
+                "data" => [
+                    "title" => $title,
+                    "body" => $body,
+                    "recipientId" => $workflow->createdBy,
+                    "deepLink" => ""
+                ],
+            ]);
+        }
 
         if ($workflowStep) {
             if ($workflowStep->statusId == GXRabbitAsyncWorkflowStatus::ERROR_ID && $workflowStep->reprocessed >= 10) {
