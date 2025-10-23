@@ -7,6 +7,7 @@ use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitConfiguration;
 use GlobalXtreme\RabbitMQ\PrivateAPI\BusinessWorkflowAPI;
 use GlobalXtreme\RabbitMQ\Queue\Contract\GXAsyncWorkflowForwardPayload;
 use Illuminate\Support\Facades\Log;
@@ -251,7 +252,11 @@ class GXAsyncWorkflowConsumer
         }
 
         if (!$nextWorkflowStep && $workflow->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
+            $workflow->allowResendAt = null;
             $workflow->statusId = GXRabbitAsyncWorkflowStatus::SUCCESS_ID;
+            $workflow->save();
+        } else {
+            $workflow->allowResendAt = GXRabbitConfiguration::setAllowResendAt();
             $workflow->save();
         }
 
@@ -321,6 +326,7 @@ class GXAsyncWorkflowConsumer
             'reprocessed' => $workflow->reprocessed,
             'createdBy' => $workflow->createdByName,
             'createdAt' => optional($workflow->createdAt)->format('d/m/Y H:i:s'),
+            'allowResendAt' => optional($workflow->allowResendAt)->format('d/m/Y H:i:s'),
             'reference' => [
                 'id' => $workflow->referenceId,
                 'type' => $workflow->referenceType,

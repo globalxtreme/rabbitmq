@@ -32,6 +32,7 @@ class GXRabbitAsyncWorkflow extends BaseModel
         'totalStep' => 'integer',
         'reprocessed' => 'integer',
         'errors' => 'array',
+        'allowResendAt' => 'datetime',
     ];
 
 

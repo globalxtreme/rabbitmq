@@ -7,6 +7,7 @@ use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Form\GXAsyncWorkflowForm;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitConfiguration;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -266,6 +267,7 @@ class GXAsyncWorkflowPublish
                 'successMessage' => $this->successMessage,
                 'errorMessage' => $this->errorMessage,
                 'totalStep' => $this->totalStep,
+                'allowResendAt' => GXRabbitConfiguration::setAllowResendAt(),
                 'createdBy' => $this->createdBy,
                 'createdByName' => $this->createdByName,
             ]);
