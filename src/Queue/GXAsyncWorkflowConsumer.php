@@ -7,6 +7,7 @@ use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitMessageDeliveryStatus;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitConfiguration;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitMessage;
 use GlobalXtreme\RabbitMQ\PrivateAPI\BusinessWorkflowAPI;
@@ -230,6 +231,11 @@ class GXAsyncWorkflowConsumer
 
             $forwardStep->forwardPayload = $forwardPayload;
             $forwardStep->save();
+
+            if ($nextWorkflowStep && $forwardStep->queue == $nextWorkflowStep->queue) {
+                $nextWorkflowStep->forwardPayload = $forwardPayload;
+                $nextWorkflowStep->save();
+            }
         }
 
         if (!$nextWorkflowStep) {
@@ -239,7 +245,11 @@ class GXAsyncWorkflowConsumer
         }
 
         if (!$nextWorkflowStep && $workflow->statusId != GXRabbitAsyncWorkflowStatus::SUCCESS_ID) {
+            $workflow->allowResendAt = null;
             $workflow->statusId = GXRabbitAsyncWorkflowStatus::SUCCESS_ID;
+            $workflow->save();
+        } else {
+            $workflow->allowResendAt = GXRabbitConfiguration::setAllowResendAt();
             $workflow->save();
         }
 
@@ -309,6 +319,7 @@ class GXAsyncWorkflowConsumer
             'reprocessed' => $workflow->reprocessed,
             'createdBy' => $workflow->createdByName,
             'createdAt' => $workflow->createdAt?->format('d/m/Y H:i:s'),
+            'allowResendAt' => $workflow->allowResendAt?->format('d/m/Y H:i:s'),
             'reference' => [
                 'id' => $workflow->referenceId,
                 'type' => $workflow->referenceType,
@@ -349,16 +360,18 @@ class GXAsyncWorkflowConsumer
 
     private function pushToNotification($workflow, $workflowStep, $title, $body)
     {
-        BusinessWorkflowAPI::notificationPush([
-            "blueprintCode" => "async-workflow.admin",
-            "service" => $workflow->referenceService,
-            "data" => [
-                "title" => $title,
-                "body" => $body,
-                "recipientId" => $workflow->createdBy,
-                "deepLink" => ""
-            ],
-        ]);
+        if ($workflow->createdBy) {
+            BusinessWorkflowAPI::notificationPush([
+                "blueprintCode" => "async-workflow.admin",
+                "service" => $workflow->referenceService,
+                "data" => [
+                    "title" => $title,
+                    "body" => $body,
+                    "recipientId" => $workflow->createdBy,
+                    "deepLink" => ""
+                ],
+            ]);
+        }
 
         if ($workflowStep?->statusId == GXRabbitAsyncWorkflowStatus::ERROR_ID && $workflowStep?->reprocessed >= 10) {
             $message = sprintf("*ERROR ASA:* %d\n", $workflow->id);

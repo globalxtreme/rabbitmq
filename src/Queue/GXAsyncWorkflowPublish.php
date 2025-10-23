@@ -5,6 +5,7 @@ namespace GlobalXtreme\RabbitMQ\Queue;
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitAsyncWorkflowStatus;
 use GlobalXtreme\RabbitMQ\Constant\GXRabbitConnectionType;
 use GlobalXtreme\RabbitMQ\Form\GXAsyncWorkflowForm;
+use GlobalXtreme\RabbitMQ\Models\GXRabbitConfiguration;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflow;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitAsyncWorkflowStep;
 use GlobalXtreme\RabbitMQ\Models\GXRabbitConnection;
@@ -248,6 +249,7 @@ class GXAsyncWorkflowPublish
                 'successMessage' => $this->successMessage,
                 'errorMessage' => $this->errorMessage,
                 'totalStep' => $this->totalStep,
+                'allowResendAt' => GXRabbitConfiguration::setAllowResendAt(),
                 'createdBy' => $this->createdBy,
                 'createdByName' => $this->createdByName,
             ]);
