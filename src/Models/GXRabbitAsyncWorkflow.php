@@ -11,7 +11,7 @@ class GXRabbitAsyncWorkflow extends BaseModel
     protected $table = 'async_workflows';
     protected $guarded = ['id'];
 
-    protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT];
+    protected $dates = [self::CREATED_AT, self::UPDATED_AT, self::DELETED_AT, 'allowResendAt'];
     protected $casts = [
         'totalStep' => 'integer',
         'reprocessed' => 'integer',
