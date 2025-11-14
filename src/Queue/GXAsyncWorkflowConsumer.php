@@ -207,7 +207,7 @@ class GXAsyncWorkflowConsumer
                     $errorMessage = $workflow->errorMessage;
                 }
 
-                $this->pushToNotification($workflow, $workflowStep, $errorMessage, $errorInternalMsg);
+                $this->pushToNotification($workflow, $workflowStep, $errorMessage, $errorInternalMsg, "error");
             }
         }
     }
@@ -283,7 +283,7 @@ class GXAsyncWorkflowConsumer
             if ($successMsg == "") {
                 $successMsg = sprintf("Process in action (%s) has been successfully", $workflow->action);
             }
-            $this->pushToNotification($workflow, $workflowStep, $successMsg, $successMsg);
+            $this->pushToNotification($workflow, $workflowStep, $successMsg, $successMsg, "success");
         }
 
         $this->sendToMonitoringActionEvent($workflow, $workflowStep);
@@ -358,11 +358,12 @@ class GXAsyncWorkflowConsumer
         ]));
     }
 
-    private function pushToNotification($workflow, $workflowStep, $title, $body)
+    private function pushToNotification($workflow, $workflowStep, $title, $body, $status)
     {
         if ($workflow->createdBy) {
             BusinessWorkflowAPI::notificationPush([
                 "blueprintCode" => "async-workflow.admin",
+                "type" => $status,
                 "service" => $workflow->referenceService,
                 "data" => [
                     "title" => $title,
@@ -388,6 +389,7 @@ class GXAsyncWorkflowConsumer
 
             BusinessWorkflowAPI::notificationPush([
                 "blueprintCode" => "async-workflow.developer",
+                "type" => $status,
                 "service" => $workflow->referenceService,
                 "data" => [
                     "message" => $message,
