@@ -93,10 +93,10 @@ class GXAsyncWorkflowConsumer
             $body = json_decode($message->getBody(), true);
             $data = $body['data'];
 
-            $serviceName = config('base.conf.service');
             $workflow = GXRabbitAsyncWorkflow::with([
-                'steps' => function ($query) use ($queue, $serviceName) {
-                    $query->where('queue', $queue);
+                'steps' => function ($query) use ($queue, $body) {
+                    $query->where('queue', $queue)
+                        ->where('stepOrder', $body['stepOrder']);
                 }
             ])->find($body['workflowId']);
             if (!$workflow) {
@@ -109,7 +109,7 @@ class GXAsyncWorkflowConsumer
                 return;
             }
 
-            $workflowStep = $workflow->steps->where('queue', $queue)->first();
+            $workflowStep = $workflow->steps->where('queue', $queue)->where('stepOrder', $body['stepOrder'])->first();
             if (!$workflowStep) {
                 $this->failedConsuming($consumer, $workflow, null, "Get async workflow step data ($queue) is failed. [{$body['workflowId']}]");
                 return;
@@ -279,7 +279,7 @@ class GXAsyncWorkflowConsumer
 
             if (count($payload) > 0) {
                 $publish = new GXAsyncWorkflowPublish();
-                $publish->pushWorkflowMessage($workflow->id, $nextWorkflowStep->queue, $payload);
+                $publish->pushWorkflowMessage($workflow->id, $nextWorkflowStep->stepOrder, $nextWorkflowStep->queue, $payload);
             }
         }
 

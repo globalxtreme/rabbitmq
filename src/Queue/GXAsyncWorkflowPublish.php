@@ -299,14 +299,14 @@ class GXAsyncWorkflowPublish
 
             $this->sendToMonitoringEvent($workflow);
 
-            $this->pushWorkflowMessage($workflow->id, $this->firstStep->queue, $this->firstStep->payload);
+            $this->pushWorkflowMessage($workflow->id, $this->firstStep->stepOrder, $this->firstStep->queue, $this->firstStep->payload);
 
         } catch (\Throwable $throw) {
             $this->logError($throw->getMessage());
         }
     }
 
-    public function pushWorkflowMessage($workflowId, string $queue, array $payload)
+    public function pushWorkflowMessage($workflowId, $stepOrder, string $queue, array $payload)
     {
         try {
 
@@ -319,6 +319,7 @@ class GXAsyncWorkflowPublish
             $msg = new AMQPMessage(json_encode([
                 'data' => $payload,
                 'workflowId' => $workflowId,
+                'stepOrder' => $stepOrder
             ]));
 
             if ($queue != "") {
