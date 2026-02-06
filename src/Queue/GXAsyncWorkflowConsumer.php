@@ -301,6 +301,8 @@ class GXAsyncWorkflowConsumer
         $result = [
             'id' => $workflow->id,
             'service' => $workflow->referenceService,
+            'referenceId' => $workflow->referenceId,
+            'referenceType' => $workflow->referenceType,
             'createdBy' => $workflow->createdBy,
         ];
 
