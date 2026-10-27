@@ -213,10 +213,6 @@ class GXAsyncWorkflowPublish
                 $this->logError("Please set your action");
             }
 
-            if (!$this->referenceId || !$this->referenceType) {
-                $this->logError("Please set your reference");
-            }
-
             if (count($this->steps) == 0) {
                 $this->logError("Please setup your workflow step");
             }
@@ -226,6 +222,10 @@ class GXAsyncWorkflowPublish
             }
 
             if ($this->isStrict) {
+                if (!$this->referenceId || !$this->referenceType) {
+                    $this->logError("Please set your reference for use strict action");
+                }
+
                 $totalWorkflow = GXRabbitAsyncWorkflow::where('action', $this->action)
                     ->where('referenceId', $this->referenceId)
                     ->where('referenceType', $this->referenceType)
